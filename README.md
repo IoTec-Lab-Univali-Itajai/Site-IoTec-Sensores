@@ -73,7 +73,6 @@ O backend escuta continuamente os tópicos e:
 
 **Passos iniciais:**
 
-```bash
 # Clonar o repositório
 git clone https://github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores
 cd Site-IoTec-Sensores
