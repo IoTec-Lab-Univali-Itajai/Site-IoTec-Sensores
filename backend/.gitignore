@@ -1,0 +1,16 @@
+# Node.js
+frontend/node_modules
+frontend/.env
+
+# Go
+backend/bin/
+backend/vendor/
+*.exe
+*.out
+
+# VSCode
+.vscode/
+
+# Sistema
+.DS_Store
+Thumbs.db
