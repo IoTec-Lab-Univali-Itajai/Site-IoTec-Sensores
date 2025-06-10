@@ -85,6 +85,7 @@ npm start
 # Em outro terminal, rodar o backend
 cd ../backend
 go run main.go
+
 📁 Estrutura do Projeto
 bash
 Copiar
@@ -94,9 +95,9 @@ Site-IoTec-Sensores/
 ├── frontend/            # React: Interface pública e ADM
 ├── README.md
 └── .gitignore
+
 👨‍🔬 Desenvolvido por
 Laboratório IoTec – UNIVALI - Itajaí
 Projeto de Inovação em Monitoramento e Controle de Sensores
 
-📝 Licença
-Distribuído sob a licença MIT.
+
