@@ -1,5 +1,7 @@
+// components/Sidebar.js
 import React from 'react';
 import './Sidebar.css';
+import { Link } from 'react-router-dom';
 
 function Sidebar({ isOpen, onClose }) {
   return (
@@ -8,9 +10,8 @@ function Sidebar({ isOpen, onClose }) {
         &times;
       </button>
       <nav>
-        <a href="/">Página Inicial</a>
-        <a href="/adm">Administração</a>
-        {/* Adicione mais links aqui */}
+        <Link to="/" onClick={onClose}>Página Inicial</Link>
+        <Link to="/adm" onClick={onClose}>Administração</Link>
       </nav>
     </div>
   );

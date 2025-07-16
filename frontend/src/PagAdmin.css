@@ -1,0 +1,13 @@
+.pagadmin-main {
+    padding: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    font-family: 'Trebuchet MS', sans-serif;
+    color: #333;
+  }
+  
+  .pagadmin-main h2 {
+    color: #3f56d3;
+    margin-bottom: 15px;
+  }
+  
