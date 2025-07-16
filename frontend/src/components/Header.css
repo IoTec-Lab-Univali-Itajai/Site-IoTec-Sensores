@@ -1,0 +1,38 @@
+.AppHeader {
+  margin: 0;
+  padding: 0 20px;
+  background-color: #3f56d3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: 'Trebuchet MS', sans-serif;
+  color: white;
+  width: 100%;
+  height: 100px;
+  box-sizing: border-box;
+}
+
+/* Container central para título + logo */
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Botão de menu */
+.menu-button {
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+/* Logo */
+.AppHeader img {
+  height: 50px;
+  object-fit: contain;
+}
