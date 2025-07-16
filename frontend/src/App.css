@@ -27,4 +27,12 @@ body {
   main {
     padding: 20px;
   }
+
+  .cards-container {
+    display: flex;
+    flex-wrap: wrap;           /* Permite quebrar linha */
+    justify-content: flex-start; /* Alinha tudo à esquerda */
+    gap: 15px;                 /* Espaçamento entre os cards */
+    padding: 20px;
+  }
   

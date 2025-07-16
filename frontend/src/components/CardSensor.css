@@ -1,0 +1,59 @@
+.chart-container {
+    width: 90%;
+    max-width: 400px;       /* Limita a largura máxima */
+    max-height: 350px;      /* Limita a altura máxima */
+    overflow-y: auto;       /* Barra de rolagem vertical se ultrapassar max-height */
+    margin: 20px auto;
+    padding: 15px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .sensor-chart {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  
+  .sensor-chart-item {
+    background-color: #f0f4ff;
+    border-radius: 8px;
+    padding: 10px 15px;
+    min-width: 70px;
+    max-width: 120px;      /* limite máximo da largura */
+    max-height: 140px;     /* limite máximo da altura */
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .sensor-chart-item h1 {
+    margin: 0;
+    font-size: 1.5rem;     /* diminui um pouco o texto */
+    color: #003366;
+    word-wrap: break-word; /* quebra texto grande se houver */
+    max-height: 3.6rem;    /* limita a altura do texto */
+    overflow: hidden;      /* esconde o que ultrapassar */
+  }
+  
+  .sensor-chart-item p {
+    margin: 5px 0 0 0;
+    font-weight: 600;
+    color: #555;
+    text-transform: capitalize;
+    font-size: 0.9rem;     /* deixa o texto menor */
+    word-wrap: break-word;
+  }
+  
+  h3 {
+    margin-bottom: 15px;
+    color: #003366;
+    text-align: center;
+  }
+  
