@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// Carregar .env (se estiver usando)
-	err := godotenv.Load("../.env")
+	err := godotenv.Load("./.env")
 	if err != nil {
 		log.Println("⚠️  Arquivo .env não encontrado, prosseguindo sem ele")
 	}
