@@ -1,0 +1,15 @@
+Iotec_Lab
+	iotec-lab-database
+		topicsCollection -> ID, string única de nome
+		sensorsCollection -> ID, string com ID no mqtt, ID topic, string descritiva, timestamp da ultima atualização 
+		dataCollection -> ID, ID sensor, timestamp, map de dados
+		
+
+
+Código Hexadecimal de 4 bits
+
+bit 0: de A a F, determina bloco
+
+bit 1: de 0 a A, determina subbloco
+
+bit 2 e 3: determina numero do sensor
