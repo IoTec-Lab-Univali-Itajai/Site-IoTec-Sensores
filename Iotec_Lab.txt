@@ -33,6 +33,10 @@ Back: Salva a lista de sensores e cria outras duas listas
 
 		Essa lista só é atualizada caso o usuário provoque alguma mudança nela (exclusão, adição ou mudança de status)
 
+	Ao receber um sensor novo do frontend ele adiciona tudo no banco de dados e na lista de sensores salva na memória RAM (ou eventualmente no Reddis, mas ambos usam RAM ai)
+	Se der certo salvar ele passa a processar os dados quando forem identificados como desse sensor e retorna a informação para o front-end que o cadastro de sensor deu certo
+
+
 	PROCESSOS E THREADS:
 		O fornecimento de dados para a Home e para a PagAdm devem ser feitos em dois processos separados.
 
@@ -46,3 +50,5 @@ Back: Salva a lista de sensores e cria outras duas listas
 Front: 
 	1 - Home: Apenas exibe a lista de sensores recebidos e seus dados. Constantemente atualizada
 	2 - ADM: Recebe a lista(1), exibe e atualiza mediante ações do usuário e envia de volta para o backend
+		Ao cadastrar um sensor, ele primeiro manda a informação para o back. se tudo der certo, atualiza a lista com o campo tipo de dados
+		e status vazio pq n existe informação coletada do sensor ainda
