@@ -13,3 +13,36 @@ bit 0: de A a F, determina bloco
 bit 1: de 0 a A, determina subbloco
 
 bit 2 e 3: determina numero do sensor
+
+
+
+INTEGRAÇÃO FRONT-BACK-BD
+
+BD: fornece lista de sensores para o backend
+
+Back: Salva a lista de sensores e cria outras duas listas
+	1 - Lista com OBJETOS que representam os sensores que possuem o status de exibição como true para serem exibidos na home.
+		Cada objeto possui os dados da ultima mensagem relevante recebida do sensor. 
+		Essa lista é constantemente atualizada.
+
+	2 - Lista(1) com listas(2) que representam tópicos, contendo os sensores desses tópicos. 
+		Também contém a informação de status da exibição e data da ultima mensagem. 
+		As listas(2) devem estar ordenadas por ID, considerando uma casa do código hexadecimal por vez, do menor para o maior
+
+		Essa lista(1) é atualizada pela página de adm e retorna para o backend para salvar as alterações no banco de dados
+
+		Essa lista só é atualizada caso o usuário provoque alguma mudança nela (exclusão, adição ou mudança de status)
+
+	PROCESSOS E THREADS:
+		O fornecimento de dados para a Home e para a PagAdm devem ser feitos em dois processos separados.
+
+		A detecção de recebimento de mensagens no mqtt deve ser feita por um processo separado. 
+		Ao receber uma mensagem, esse processo deve criar uma thread para atualizar os dados recebidos.
+
+		As consultas ao BD devem ser feitas por um processo separado, que encapsula cada acesso ao BD em uma thread.
+
+		TODOS os processos e threads devem usar MUTEX para proteção dos dados
+
+Front: 
+	1 - Home: Apenas exibe a lista de sensores recebidos e seus dados. Constantemente atualizada
+	2 - ADM: Recebe a lista(1), exibe e atualiza mediante ações do usuário e envia de volta para o backend

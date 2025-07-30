@@ -1,0 +1,13 @@
+.card-topic {
+    background-color: #f2f2f2;
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    border-left: 4px solid #3f56d3;
+    transition: background-color 0.2s ease;
+  }
+  
+  .card-topic:hover {
+    background-color: #e6e6e6;
+  }
+  
