@@ -1,55 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './PagAdmin.css';
 import CardTopic from './components/CardTopic';
 import StatusSensor from './components/StatusSensor';
 
-// Dados iniciais (poderia ser movido para um arquivo separado)
-let topicosIniciais = [
-  {
-    nome: "iot/lab/sala1",
-    sensores: [
-      {
-        id: "E301",
-        nome: "Sensor Temperatura 1",
-        tipoDados: ["temperatura", "umidade"],
-        ultimaAtualizacao: "2025-07-30 14:25",
-      },
-      {
-        id: "B700",
-        nome: "Sensor Pressão",
-        tipoDados: ["pressao"],
-        ultimaAtualizacao: "2025-07-28 13:50",
-      },
-      {
-        id: "B701",
-        nome: "Sensor Pressão 2",
-        tipoDados: ["pressao"],
-        ultimaAtualizacao: "2025-07-22 13:50",
-      },
-    ],
-  },
-  {
-    nome: "iot/lab/sala2",
-    sensores: [
-      {
-        id: "C400",
-        nome: "Sensor Vibração",
-        tipoDados: ["vibracao", "deslocamento_vertical"],
-        ultimaAtualizacao: "2025-07-30 14:10",
-      },
-      {
-        id: "C401",
-        nome: "Sensor Vibração",
-        tipoDados: ["vibracao", "deslocamento_vertical"],
-        ultimaAtualizacao: "2025-07-30 14:10",
-      },
-    ],
-  },
-];
-
 function PagAdmin() {
+  const [topicos, setTopicos] = useState([]);
   const [topicoSelecionado, setTopicoSelecionado] = useState(null);
-  const [topicos, setTopicos] = useState(topicosIniciais);
+
+  useEffect(() => {
+    fetch('http://localhost:8080/api/topics')  // ajuste porta se necessário
+      .then(response => response.json())
+      .then(data => setTopicos(data))
+      .catch(err => console.error('Erro ao buscar tópicos:', err));
+  }, []);
 
   const handleSelecionarTopico = (nome) => {
     setTopicoSelecionado(nome);
@@ -59,21 +22,30 @@ function PagAdmin() {
     setTopicoSelecionado(null);
   };
 
-  const handleRemoverSensor = (sensorId) => {
-    // Atualiza o array de tópicos
-    const novosTopicos = topicos.map(topico => {
-      if (topico.nome === topicoSelecionado) {
-        return {
-          ...topico,
-          sensores: topico.sensores.filter(sensor => sensor.id !== sensorId)
-        };
-      }
-      return topico;
-    });
-    
-    // Atualiza o estado e a variável let
-    setTopicos(novosTopicos);
-    topicosIniciais = novosTopicos;
+  const handleRemoverSensor = async (sensorId) => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/sensor/${sensorId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error('Erro ao remover sensor');
+
+      // Atualiza estado local
+      const novosTopicos = topicos.map(topico => {
+        if (topico.nome === topicoSelecionado) {
+          return {
+            ...topico,
+            sensores: topico.sensores.filter(sensor => sensor.id !== sensorId)
+          };
+        }
+        return topico;
+      });
+
+      setTopicos(novosTopicos);
+    } catch (error) {
+      console.error(error);
+      alert('Falha ao remover sensor.');
+    }
   };
 
   const sensoresSelecionados = topicos.find(t => t.nome === topicoSelecionado)?.sensores || [];
@@ -81,30 +53,21 @@ function PagAdmin() {
   return (
     <main className="pagadmin-main">
       <h2>Área de Administração</h2>
-      
+
       {!topicoSelecionado ? (
         <>
           <p>Selecione um tópico para visualizar os sensores:</p>
           <div className="topicos-container">
             {topicos.map((topico) => (
-              <CardTopic
-                key={topico.nome}
-                nome={topico.nome}
-                onSelect={handleSelecionarTopico}
-              />
+              <CardTopic key={topico.nome} nome={topico.nome} onSelect={handleSelecionarTopico} />
             ))}
           </div>
         </>
       ) : (
         <>
-          <button onClick={handleVoltar} className="botao-voltar">
-            ← Voltar para tópicos
-          </button>
+          <button onClick={handleVoltar} className="botao-voltar">← Voltar</button>
           <h3>Sensores do tópico: <em>{topicoSelecionado}</em></h3>
-          <StatusSensor 
-            sensores={sensoresSelecionados} 
-            onRemoveSensor={handleRemoverSensor}
-          />
+          <StatusSensor sensores={sensoresSelecionados} onRemoveSensor={handleRemoverSensor} />
         </>
       )}
     </main>

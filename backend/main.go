@@ -2,24 +2,25 @@ package main
 
 import (
 	"log"
-
 	"github.com/joho/godotenv"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/mqtt"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/api"
 )
 
 func main() {
-	// Carregar .env (se estiver usando)
 	err := godotenv.Load("./.env")
 	if err != nil {
 		log.Println("⚠️  Arquivo .env não encontrado, prosseguindo sem ele")
 	}
 
-	// Exemplo de tópicos
-	topics := []string{"iot/lab/sala1", "iot/sala2"}
+	// Conecta no banco de dados
+	db.ConnectMongoDB()
 
-	// Conectar e escutar MQTT
+	// Exemplo: escutar tópicos MQTT (em produção seria mais dinâmico)
+	topics := []string{"iot/lab/sala1", "iot/sala2"}
 	mqtt.ConnectMQTT(topics)
 
-	// Bloquear a main para manter o programa rodando
-	select {}
+	// Inicia o servidor de API
+	api.StartAPI() // ← AQUI! Isso roda o servidor em :8080
 }
