@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaTrash } from 'react-icons/fa';
 import './StatusSensor.css';
+import BotaoAdd from './botaoAdd';
 
 const getStatusColor = (ultimaAtualizacao) => {
   const agora = new Date();
@@ -16,8 +17,8 @@ function StatusSensor({ sensores, onRemoveSensor }) {
   const [sensorParaRemover, setSensorParaRemover] = useState(null);
 
   const confirmarRemocao = (sensor) => {
-    if (window.confirm(`Tem certeza que deseja remover o sensor "${sensor.nome}" (ID: ${sensor.id})?`)) {
-      onRemoveSensor(sensor.id);
+    if (window.confirm(`Tem certeza que deseja remover o sensor "${sensor.nome}" (ID: ${sensor.mqttID})?`)) {
+      onRemoveSensor(sensor.mqttID);
     }
   };
 
@@ -29,13 +30,12 @@ function StatusSensor({ sensores, onRemoveSensor }) {
     <div className="sensor-container">
       <div className="sensor-list">
         {sensores.map((sensor) => (
-          <div key={sensor.id} className="sensor-card">
+          <div key={sensor._id?.$oid || sensor.mqttID} className="sensor-card">
             <div className="sensor-info">
               <h4>{sensor.nome}</h4>
-              <p><strong>ID:</strong> {sensor.id}</p>
-              <p><strong>Tipo:</strong> {sensor.tipoDados.join(', ')}</p>
+              <p><strong>ID:</strong> {sensor.mqttID}</p>
               <div className="status-dot-container">
-                <span className={`status-dot ${getStatusColor(sensor.ultimaAtualizacao)}`}></span>
+                <span className={`status-dot ${getStatusColor(sensor.lastUpdate || sensor.ultimaAtualizacao)}`}></span>
               </div>
             </div>
             <button 
@@ -47,6 +47,10 @@ function StatusSensor({ sensores, onRemoveSensor }) {
             </button>
           </div>
         ))}
+      </div>
+
+      <div className="botao-add-wrapper">
+        <BotaoAdd texto="Sensor" />
       </div>
       
       <div className="status-legend">

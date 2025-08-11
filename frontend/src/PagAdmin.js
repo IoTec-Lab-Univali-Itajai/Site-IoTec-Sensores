@@ -35,7 +35,7 @@ function PagAdmin() {
         if (topico.nome === topicoSelecionado) {
           return {
             ...topico,
-            sensores: topico.sensores.filter(sensor => sensor.id !== sensorId)
+            sensores: topico.sensores.filter(sensor => sensor.mqttID !== sensorId)
           };
         }
         return topico;

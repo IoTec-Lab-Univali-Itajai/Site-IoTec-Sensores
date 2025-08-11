@@ -9,12 +9,21 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.mongodb.org/mongo-driver/bson"
+	"github.com/go-chi/cors"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db" // IMPORTA O PACOTE DB
 )
 
 func StartAPI() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300, // cache preflight for 5 minutes
+	}))
 
 	// ROTAS
 	r.Get("/api/topics", GetTopicsWithSensors)
@@ -48,12 +57,20 @@ func GetTopicsWithSensors(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		cursorSensores, err := db.SensorsCollection.Find(ctx, bson.M{"id_topic": nomeTopico})
+		filter := bson.M{"topicID": topico["_id"]}
+		cursorSensores, err := db.SensorsCollection.Find(ctx, filter)
+
 		if err != nil {
 			continue
 		}
 		var sensores []bson.M
 		cursorSensores.All(ctx, &sensores)
+
+		for i := range sensores {
+   			 if val, ok := sensores[i]["lastUpdate"]; ok {
+       		 sensores[i]["ultimaAtualizacao"] = val
+    		}
+}
 
 		resposta = append(resposta, map[string]interface{}{
 			"nome":     nomeTopico,
@@ -74,7 +91,7 @@ func DeleteSensor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := context.TODO()
-	result, err := db.SensorsCollection.DeleteOne(ctx, bson.M{"id": idSensor})
+	result, err := db.SensorsCollection.DeleteOne(ctx, bson.M{"mqttID": idSensor})
 	if err != nil {
 		http.Error(w, "Erro ao remover sensor", http.StatusInternalServerError)
 		return
