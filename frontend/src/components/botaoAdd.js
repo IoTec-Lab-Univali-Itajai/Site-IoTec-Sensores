@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import './botaoAdd.css';
 import './ModalForm.css'; // Você precisará criar este CSS
 
-function BotaoAdd({ texto, topico, onSensorAdded }) {
+function BotaoAdd({ texto, topico, onSuccess }) {
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     mqttID: '',
     topicName: topico, // Agora enviamos o nome do tópico
-    descricao: ''
+    descricao: '',
+    showOnScreen: false
   });
 
   const handleInputChange = (e) => {
@@ -32,15 +33,17 @@ function BotaoAdd({ texto, topico, onSensorAdded }) {
 
       if (!response.ok) throw new Error('Erro ao adicionar sensor');
 
-      const result = await response.json();
       alert('Sensor adicionado com sucesso!');
       setShowModal(false);
-      onSensorAdded(); // Chama a função para atualizar a lista de sensores
+      // Chame o callback de sucesso
+      if (typeof onSuccess === 'function') {
+        onSuccess();
+      }
     } catch (error) {
       console.error(error);
       alert('Falha ao adicionar sensor: ' + error.message);
     }
-  };
+};
 
   return (
     <>
@@ -72,6 +75,18 @@ function BotaoAdd({ texto, topico, onSensorAdded }) {
                   value={formData.descricao}
                   onChange={handleInputChange}
                 />
+              </div>
+
+              <div className="form-group">
+                <label>Mostrar na Home:</label>
+                <select
+                  name="showOnScreen"
+                  value={formData.showOnScreen}
+                  onChange={handleInputChange}
+                >
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
               </div>
               
               <div className="form-actions">

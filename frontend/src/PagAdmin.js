@@ -48,6 +48,16 @@ function PagAdmin() {
     }
   };
 
+  const handleSensorAdded = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/topics');
+    const data = await response.json();
+    setTopicos(data);
+  } catch (err) {
+    console.error('Erro ao atualizar tópicos:', err);
+  }
+};
+
   const sensoresSelecionados = topicos.find(t => t.nome === topicoSelecionado)?.sensores || [];
 
   return (
@@ -67,7 +77,12 @@ function PagAdmin() {
         <>
           <button onClick={handleVoltar} className="botao-voltar">← Voltar</button>
           <h3>Sensores do tópico: <em>{topicoSelecionado}</em></h3>
-          <StatusSensor sensores={sensoresSelecionados} onRemoveSensor={handleRemoverSensor} topico={topicoSelecionado} />
+          <StatusSensor 
+            sensores={sensoresSelecionados} 
+            onRemoveSensor={handleRemoverSensor} 
+            topico={topicoSelecionado}
+            onSensorAdded={handleSensorAdded}  // Adicione esta linha
+          />
         </>
       )}
     </main>

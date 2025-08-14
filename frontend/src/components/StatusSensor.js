@@ -4,17 +4,20 @@ import './StatusSensor.css';
 import BotaoAdd from './botaoAdd';
 
 const getStatusColor = (ultimaAtualizacao) => {
+  const DATA_PADRAO = new Date("1977-11-18T12:00:00Z");
   const agora = new Date();
   const dataAtualizacao = new Date(ultimaAtualizacao);
   const diffDias = Math.floor((agora - dataAtualizacao) / (1000 * 60 * 60 * 24));
 
+  if (dataAtualizacao.getTime() === DATA_PADRAO.getTime()) {
+    return 'black';
+  }
   if (diffDias <= 1) return 'green';
   if (diffDias <= 7) return 'yellow';
   return 'red';
 };
 
-function StatusSensor({ sensores, onRemoveSensor, topico }) {
-  const [sensorParaRemover, setSensorParaRemover] = useState(null);
+function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
 
   const confirmarRemocao = (sensor) => {
     if (window.confirm(`Tem certeza que deseja remover o sensor "${sensor.nome}" (ID: ${sensor.mqttID})?`)) {
@@ -53,14 +56,13 @@ function StatusSensor({ sensores, onRemoveSensor, topico }) {
         <BotaoAdd 
           texto="Sensor" 
           topico={topico} 
-          onSensorAdded={() => {
-            // Recarrega os tópicos e sensores
-            fetch('http://localhost:8080/api/topics')
-              .then(response => response.json())
-              .then(data => setTopicos(data))
-              .catch(err => console.error('Erro ao buscar tópicos:', err));
+          onSuccess={() => {
+            // Isso será tratado pelo componente pai
+            if (typeof onSensorAdded === 'function') {
+              onSensorAdded();
+            }
           }} 
-/>
+        />
       </div>
       
       <div className="status-legend">
@@ -77,6 +79,10 @@ function StatusSensor({ sensores, onRemoveSensor, topico }) {
           <div className="legend-item">
             <span className="status-dot red"></span>
             <span>Desatualizado (+1 semana)</span>
+          </div>
+           <div className="legend-item">
+            <span className="status-dot black"></span>
+            <span>Sem dados recebidos</span>
           </div>
         </div>
       </div>

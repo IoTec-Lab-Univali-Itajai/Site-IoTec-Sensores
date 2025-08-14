@@ -16,6 +16,7 @@ type Sensor struct {
     TopicID    primitive.ObjectID `bson:"topicID"`
     Descricao  string    `bson:"descricao"`
     LastUpdate time.Time `bson:"lastUpdate"`
+	ShowOnScreen bool `bson:"showOnScreen"`
 }
 
 type SensorData struct {

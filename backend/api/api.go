@@ -5,13 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
+	"fmt"
 
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db" // IMPORTA O PACOTE DB
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"go.mongodb.org/mongo-driver/bson"
-	"time"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -118,7 +120,9 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
         MqttID    string `json:"mqttID"`
         TopicName string `json:"topicName"` // Agora recebemos o nome do tópico
         Descricao string `json:"descricao"`
+		ShowOnScreen string `json:"showOnScreen"`
     }
+
 
     if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
         http.Error(w, "Dados do sensor inválidos", http.StatusBadRequest)
@@ -137,14 +141,22 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 
     topicID := topico["_id"].(primitive.ObjectID)
 
+	// Converte ShowOnScreen de string para bool
+    showOnScreenBool, err := strconv.ParseBool(payload.ShowOnScreen)
+    if err != nil {
+        fmt.Println("Erro na conversão:", err)
+        showOnScreenBool = false // valor padrão em caso de erro
+    }
+
     // Cria o sensor com todos os campos obrigatórios
     sensor := bson.M{
         "mqttID":     payload.MqttID,
         "topicID":    topicID,
         "descricao": payload.Descricao,
-        "lastUpdate": time.Now(), // Define a data atual como última atualização
+        "lastUpdate": time.Date(1977, 11, 18, 12, 0, 0, 0, time.UTC),
+		"showOnScreen":  showOnScreenBool,
     }
-
+	
     _, err = db.SensorsCollection.InsertOne(ctx, sensor)
     if err != nil {
         http.Error(w, "Erro ao criar sensor: "+err.Error(), http.StatusInternalServerError)
