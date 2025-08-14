@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Topic struct {
@@ -11,10 +12,10 @@ type Topic struct {
 }
 
 type Sensor struct {
-	ID               string `bson:"id"`
-	IDTopic          string `bson:"id_topic"`
-	Descricao        string `bson:"descricao"`
-	UltimaAtualizacao string `bson:"ultimaAtualizacao"`
+    MqttID     string    `bson:"mqttID"`
+    TopicID    primitive.ObjectID `bson:"topicID"`
+    Descricao  string    `bson:"descricao"`
+    LastUpdate time.Time `bson:"lastUpdate"`
 }
 
 type SensorData struct {

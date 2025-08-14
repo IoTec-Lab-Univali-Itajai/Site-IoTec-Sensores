@@ -13,7 +13,7 @@ const getStatusColor = (ultimaAtualizacao) => {
   return 'red';
 };
 
-function StatusSensor({ sensores, onRemoveSensor }) {
+function StatusSensor({ sensores, onRemoveSensor, topico }) {
   const [sensorParaRemover, setSensorParaRemover] = useState(null);
 
   const confirmarRemocao = (sensor) => {
@@ -50,7 +50,17 @@ function StatusSensor({ sensores, onRemoveSensor }) {
       </div>
 
       <div className="botao-add-wrapper">
-        <BotaoAdd texto="Sensor" />
+        <BotaoAdd 
+          texto="Sensor" 
+          topico={topico} 
+          onSensorAdded={() => {
+            // Recarrega os tópicos e sensores
+            fetch('http://localhost:8080/api/topics')
+              .then(response => response.json())
+              .then(data => setTopicos(data))
+              .catch(err => console.error('Erro ao buscar tópicos:', err));
+          }} 
+/>
       </div>
       
       <div className="status-legend">

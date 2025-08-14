@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db" // IMPORTA O PACOTE DB
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"go.mongodb.org/mongo-driver/bson"
 	"github.com/go-chi/cors"
-	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db" // IMPORTA O PACOTE DB
+	"go.mongodb.org/mongo-driver/bson"
+	"time"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func StartAPI() {
@@ -28,6 +30,7 @@ func StartAPI() {
 	// ROTAS
 	r.Get("/api/topics", GetTopicsWithSensors)
 	r.Delete("/api/sensor/{id}", DeleteSensor)
+	r.Post("/api/sensor", CreateSensor)
 
 	http.ListenAndServe(":8080", r)
 }
@@ -67,10 +70,10 @@ func GetTopicsWithSensors(w http.ResponseWriter, r *http.Request) {
 		cursorSensores.All(ctx, &sensores)
 
 		for i := range sensores {
-   			 if val, ok := sensores[i]["lastUpdate"]; ok {
-       		 sensores[i]["ultimaAtualizacao"] = val
-    		}
-}
+			if val, ok := sensores[i]["lastUpdate"]; ok {
+				sensores[i]["ultimaAtualizacao"] = val
+			}
+		}
 
 		resposta = append(resposta, map[string]interface{}{
 			"nome":     nomeTopico,
@@ -103,4 +106,51 @@ func DeleteSensor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(map[string]string{"message": "Sensor removido com sucesso"})
+}
+
+// Adicione esta rota junto com as outras rotas
+
+// Handler para criar um novo sensor
+func CreateSensor(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    var payload struct {
+        MqttID    string `json:"mqttID"`
+        TopicName string `json:"topicName"` // Agora recebemos o nome do tópico
+        Descricao string `json:"descricao"`
+    }
+
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        http.Error(w, "Dados do sensor inválidos", http.StatusBadRequest)
+        return
+    }
+
+    ctx := context.TODO()
+
+    // Busca o tópico pelo nome para obter seu ObjectID
+    var topico bson.M
+    err := db.TopicsCollection.FindOne(ctx, bson.M{"nome": payload.TopicName}).Decode(&topico)
+    if err != nil {
+        http.Error(w, "Tópico não encontrado", http.StatusNotFound)
+        return
+    }
+
+    topicID := topico["_id"].(primitive.ObjectID)
+
+    // Cria o sensor com todos os campos obrigatórios
+    sensor := bson.M{
+        "mqttID":     payload.MqttID,
+        "topicID":    topicID,
+        "descricao": payload.Descricao,
+        "lastUpdate": time.Now(), // Define a data atual como última atualização
+    }
+
+    _, err = db.SensorsCollection.InsertOne(ctx, sensor)
+    if err != nil {
+        http.Error(w, "Erro ao criar sensor: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{"message": "Sensor criado com sucesso"})
 }

@@ -67,7 +67,7 @@ function PagAdmin() {
         <>
           <button onClick={handleVoltar} className="botao-voltar">← Voltar</button>
           <h3>Sensores do tópico: <em>{topicoSelecionado}</em></h3>
-          <StatusSensor sensores={sensoresSelecionados} onRemoveSensor={handleRemoverSensor} />
+          <StatusSensor sensores={sensoresSelecionados} onRemoveSensor={handleRemoverSensor} topico={topicoSelecionado} />
         </>
       )}
     </main>
