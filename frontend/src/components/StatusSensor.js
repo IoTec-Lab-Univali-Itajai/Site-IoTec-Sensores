@@ -19,11 +19,36 @@ const getStatusColor = (ultimaAtualizacao) => {
 
 function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
 
+  const [, setRefresh] = useState(false);
+
   const confirmarRemocao = (sensor) => {
     if (window.confirm(`Tem certeza que deseja remover o sensor "${sensor.nome}" (ID: ${sensor.mqttID})?`)) {
       onRemoveSensor(sensor.mqttID);
     }
   };
+
+  const handleToggleVisibility = async (sensor) => {
+  const novoStatus = !sensor.showOnScreen;
+
+  try {
+    const res = await fetch(`http://localhost:8080/api/sensor/${sensor.mqttID}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ showOnScreen: novoStatus }),
+    });
+
+    if (!res.ok) throw new Error("Erro ao atualizar sensor");
+
+    // Atualiza estado local (apenas altera o valor do sensor no array)
+    sensor.showOnScreen = novoStatus;
+    setRefresh(r => !r);
+  } catch (error) {
+    console.error(error);
+    alert("Falha ao atualizar sensor.");
+  }
+};
 
   if (!sensores || sensores.length === 0) {
     return <p>Nenhum sensor registrado neste tópico.</p>;
@@ -41,6 +66,14 @@ function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
                 <span className={`status-dot ${getStatusColor(sensor.lastUpdate || sensor.ultimaAtualizacao)}`}></span>
               </div>
             </div>
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={sensor.showOnScreen || false}
+                onChange={() => handleToggleVisibility(sensor)}
+              />
+              <span className="toggle-slider"></span>
+            </label>
             <button 
               onClick={() => confirmarRemocao(sensor)}
               className="delete-button"

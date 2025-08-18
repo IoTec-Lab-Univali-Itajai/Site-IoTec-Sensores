@@ -33,6 +33,8 @@ func StartAPI() {
 	r.Get("/api/topics", GetTopicsWithSensors)
 	r.Delete("/api/sensor/{id}", DeleteSensor)
 	r.Post("/api/sensor", CreateSensor)
+	r.Put("/api/sensor/{id}", UpdateSensorVisibility)
+
 
 	http.ListenAndServe(":8080", r)
 }
@@ -165,4 +167,42 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(map[string]string{"message": "Sensor criado com sucesso"})
+}
+
+// UpdateSensorVisibility atualiza o campo showOnScreen de um sensor
+func UpdateSensorVisibility(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    mqttID := chi.URLParam(r, "id")
+    if mqttID == "" {
+        http.Error(w, "mqttID do sensor não fornecido", http.StatusBadRequest)
+        return
+    }
+
+    var payload struct {
+        ShowOnScreen bool `json:"showOnScreen"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        http.Error(w, "Payload inválido", http.StatusBadRequest)
+        return
+    }
+
+    ctx := context.TODO()
+    filter := bson.M{"mqttID": mqttID}
+    update := bson.M{"$set": bson.M{"showOnScreen": payload.ShowOnScreen}}
+
+    result, err := db.SensorsCollection.UpdateOne(ctx, filter, update)
+    if err != nil {
+        http.Error(w, "Erro ao atualizar sensor: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    if result.MatchedCount == 0 {
+        http.Error(w, "Sensor não encontrado", http.StatusNotFound)
+        return
+    }
+
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Sensor atualizado com sucesso",
+    })
 }
