@@ -33,6 +33,7 @@ func StartAPI() {
 	r.Get("/api/topics", GetTopicsWithSensors)
 	r.Delete("/api/sensor/{id}", DeleteSensor)
 	r.Post("/api/sensor", CreateSensor)
+	r.Post("/api/topic", CreateTopic)
 	r.Put("/api/sensor/{id}", UpdateSensorVisibility)
 
 
@@ -204,5 +205,49 @@ func UpdateSensorVisibility(w http.ResponseWriter, r *http.Request) {
 
     json.NewEncoder(w).Encode(map[string]string{
         "message": "Sensor atualizado com sucesso",
+    })
+}
+
+func CreateTopic(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    var payload struct {
+        Nome string `json:"nome"`
+    }
+
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        http.Error(w, "Payload inválido", http.StatusBadRequest)
+        return
+    }
+
+    if payload.Nome == "" {
+        http.Error(w, "Nome do tópico é obrigatório", http.StatusBadRequest)
+        return
+    }
+
+    ctx := context.TODO()
+
+    // Verifica se já existe um tópico com esse nome
+    var existente bson.M
+    err := db.TopicsCollection.FindOne(ctx, bson.M{"nome": payload.Nome}).Decode(&existente)
+    if err == nil {
+        http.Error(w, "Já existe um tópico com esse nome", http.StatusConflict)
+        return
+    }
+
+    // Cria o tópico
+    novoTopico := db.Topic{
+        Nome: payload.Nome,
+    }
+
+    _, err = db.TopicsCollection.InsertOne(ctx, novoTopico)
+    if err != nil {
+        http.Error(w, "Erro ao criar tópico: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusCreated)
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "Tópico criado com sucesso",
     })
 }

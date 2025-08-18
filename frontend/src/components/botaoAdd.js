@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
 import './botaoAdd.css';
-import './ModalForm.css'; // Você precisará criar este CSS
+import './ModalForm.css';
 
 function BotaoAdd({ texto, topico, onSuccess }) {
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    mqttID: '',
-    topicName: topico, // Agora enviamos o nome do tópico
-    descricao: '',
-    showOnScreen: false
-  });
+  
+  // Estado inicial baseado no tipo (sensor ou tópico)
+  const initialState = topico !== null 
+    ? { 
+        mqttID: '', 
+        topicName: topico, 
+        descricao: '', 
+        showOnScreen: true 
+      }
+    : { nome: '' };
+  
+  const [formData, setFormData] = useState(initialState);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    
+    // Trata checkboxes/selects diferentemente
+    const val = type === 'checkbox' ? checked : value;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: val
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmitSensor = async (e) => {
     e.preventDefault();
     
     try {
@@ -28,72 +38,152 @@ function BotaoAdd({ texto, topico, onSuccess }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          showOnScreen: formData.showOnScreen.toString() // Converte para string
+        })
       });
 
       if (!response.ok) throw new Error('Erro ao adicionar sensor');
-
+      
       alert('Sensor adicionado com sucesso!');
       setShowModal(false);
-      // Chame o callback de sucesso
+      setFormData(initialState); // Reseta o formulário
+      
       if (typeof onSuccess === 'function') {
         onSuccess();
       }
     } catch (error) {
-      console.error(error);
-      alert('Falha ao adicionar sensor: ' + error.message);
+      console.error('Erro ao adicionar sensor:', error);
+      alert(`Falha ao adicionar sensor: ${error.message}`);
     }
-};
+  };
+
+  const handleSubmitTopic = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch('http://localhost:8080/api/topic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) throw new Error('Erro ao adicionar tópico');
+      
+      alert('Tópico adicionado com sucesso!');
+      setShowModal(false);
+      setFormData(initialState); // Reseta o formulário
+      
+      if (typeof onSuccess === 'function') {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar tópico:', error);
+      alert(`Falha ao adicionar tópico: ${error.message}`);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setFormData(initialState); // Reseta o formulário ao fechar
+  };
 
   return (
     <>
-      <button className="botao-add" onClick={() => setShowModal(true)}>
+      <button 
+        className="botao-add" 
+        onClick={() => setShowModal(true)}
+        aria-label={`Adicionar ${texto}`}
+      >
         <h3>Adicionar {texto} +</h3>
       </button>
 
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3>Adicionar Novo Sensor</h3>
-            <form onSubmit={handleSubmit}>
-      
-              <div className="form-group">
-                <label>ID MQTT:</label>
-                <input 
-                  type="text" 
-                  name="mqttID" 
-                  value={formData.mqttID}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="form-group">
-                <label>Descrição:</label>
-                <textarea 
-                  name="descricao" 
-                  value={formData.descricao}
-                  onChange={handleInputChange}
-                />
-              </div>
+            <button 
+              className="modal-close" 
+              onClick={handleCloseModal}
+              aria-label="Fechar modal"
+            >
+              &times;
+            </button>
+            
+            <h3>Adicionar Novo {topico !== null ? 'Sensor' : 'Tópico'}</h3>
+            
+            <form onSubmit={topico !== null ? handleSubmitSensor : handleSubmitTopic}>
+              {topico !== null ? (
+                <>
+                  <div className="form-group">
+                    <label htmlFor="mqttID">ID MQTT:</label>
+                    <input 
+                      type="text" 
+                      id="mqttID"
+                      name="mqttID" 
+                      value={formData.mqttID}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Ex: sensor_temperatura_01"
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label htmlFor="descricao">Descrição:</label>
+                    <textarea 
+                      id="descricao"
+                      name="descricao" 
+                      value={formData.descricao}
+                      onChange={handleInputChange}
+                      placeholder="Descrição do sensor (opcional)"
+                      rows="3"
+                    />
+                  </div>
 
-              <div className="form-group">
-                <label>Mostrar na Home:</label>
-                <select
-                  name="showOnScreen"
-                  value={formData.showOnScreen}
-                  onChange={handleInputChange}
-                >
-                  <option value="true">Sim</option>
-                  <option value="false">Não</option>
-                </select>
-              </div>
+                  <div className="form-group">
+                    <label htmlFor="showOnScreen">Mostrar na Home:</label>
+                    <select
+                      id="showOnScreen"
+                      name="showOnScreen"
+                      value={formData.showOnScreen}
+                      onChange={handleInputChange}
+                    >
+                      <option value={true}>Sim</option>
+                      <option value={false}>Não</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div className="form-group">
+                  <label htmlFor="nome">Nome do Tópico:</label>
+                  <input 
+                    type="text" 
+                    id="nome"
+                    name="nome" 
+                    value={formData.nome}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Ex: temperatura_ambiente"
+                  />
+                </div>
+              )}
               
               <div className="form-actions">
-                <button type="button" onClick={() => setShowModal(false)}>
+                <button 
+                  type="button" 
+                  onClick={handleCloseModal}
+                  className="secondary-button"
+                >
                   Cancelar
                 </button>
-                <button type="submit">Adicionar</button>
+                <button 
+                  type="submit"
+                  className="primary-button"
+                >
+                  Adicionar
+                </button>
               </div>
             </form>
           </div>

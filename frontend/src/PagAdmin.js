@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './PagAdmin.css';
 import CardTopic from './components/CardTopic';
 import StatusSensor from './components/StatusSensor';
+import BotaoAdd from './components/botaoAdd';
 
 function PagAdmin() {
   const [topicos, setTopicos] = useState([]);
@@ -48,7 +49,7 @@ function PagAdmin() {
     }
   };
 
-  const handleSensorAdded = async () => {
+  const handleAdded = async () => {
   try {
     const response = await fetch('http://localhost:8080/api/topics');
     const data = await response.json();
@@ -72,6 +73,11 @@ function PagAdmin() {
               <CardTopic key={topico.nome} nome={topico.nome} onSelect={handleSelecionarTopico} />
             ))}
           </div>
+          <BotaoAdd 
+            texto="Topico" 
+            topico={null} 
+            onSuccess={handleAdded()} 
+          />
         </>
       ) : (
         <>
@@ -81,7 +87,7 @@ function PagAdmin() {
             sensores={sensoresSelecionados} 
             onRemoveSensor={handleRemoverSensor} 
             topico={topicoSelecionado}
-            onSensorAdded={handleSensorAdded}  // Adicione esta linha
+            onSensorAdded={handleAdded}  // Adicione esta linha
           />
         </>
       )}
