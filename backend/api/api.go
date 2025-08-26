@@ -31,6 +31,7 @@ func StartAPI() {
 
 	// ROTAS
 	r.Get("/api/topics", GetTopicsWithSensors)
+	r.Get("/api/sensorView", GetSensorView)
 	r.Delete("/api/sensor/{id}", DeleteSensor)
 	r.Post("/api/sensor", CreateSensor)
 	r.Post("/api/topic", CreateTopic)
@@ -250,4 +251,28 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{
         "message": "Tópico criado com sucesso",
     })
+}
+
+func GetSensorView(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
+
+    sensores, err := db.BuscarSensoresDisplay()
+    if err != nil {
+        http.Error(w, "Erro ao buscar sensores para exibição: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    // Prepara resposta convertendo para JSON
+    var resposta []map[string]interface{}
+    for _, s := range sensores {
+        resposta = append(resposta, map[string]interface{}{
+            "mqttID":        s.MqttID,
+            "descricao":     s.Descricao,
+            "lastUpdate":    s.LastUpdate,
+            "showOnScreen":  s.ShowOnScreen,
+            "topicID":       s.TopicID, // mantém o vínculo com o tópico
+        })
+    }
+
+    json.NewEncoder(w).Encode(resposta)
 }

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
-	"github.com/joho/godotenv"
+
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/api"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/mqtt"
-	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/api"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -15,12 +17,17 @@ func main() {
 	}
 
 	// Conecta no banco de dados
-	db.ConnectMongoDB()
+	db.ConnectMongoDB();
 
-	// Exemplo: escutar tópicos MQTT (em produção seria mais dinâmico)
-	topics := []string{"iot/lab/sala1", "iot/sala2"}
-	mqtt.ConnectMQTT(topics)
+	// Conecta ao broker MQTT e escuta os tópicos configurados no .env
+	topicos, err := db.BuscarTopicos() // ← CORREÇÃO AQUI: duas variáveis
+	if err != nil {
+		log.Fatal("Erro ao buscar tópicos:", err)
+	}
+	fmt.Println("topicos encontrados: ", topicos);
+	
+	mqtt.ConnectMQTT(topicos);
 
 	// Inicia o servidor de API
-	api.StartAPI() // ← AQUI! Isso roda o servidor em :8080
+	api.StartAPI(); // servidor em :8080
 }

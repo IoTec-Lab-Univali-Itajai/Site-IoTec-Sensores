@@ -68,3 +68,18 @@ func BuscarSensoresPorTopico(idTopic string) ([]Sensor, error) {
 	}
 	return sensores, nil
 }
+
+func BuscarSensoresDisplay() ([]Sensor, error) {
+    filter := bson.M{"showOnScreen": true}
+    cursor, err := SensorsCollection.Find(context.TODO(), filter)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(context.TODO())
+
+    var sensores []Sensor
+    if err = cursor.All(context.TODO(), &sensores); err != nil {
+        return nil, err
+    }
+    return sensores, nil
+}

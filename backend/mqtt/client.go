@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"time"
-
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -18,7 +18,7 @@ var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Messa
 }
 
 // Função para conectar ao broker MQTT
-func ConnectMQTT(topics []string) {
+func ConnectMQTT(topicos []db.Topic) {
 	opts := mqtt.NewClientOptions()
 
 	// Configurações do broker
@@ -38,16 +38,15 @@ func ConnectMQTT(topics []string) {
 	opts.SetConnectRetryInterval(5 * time.Second)
 	opts.SetDefaultPublishHandler(messageHandler)
 
-	// Eventos de log
 	opts.OnConnect = func(c mqtt.Client) {
 		log.Println("[MQTT] Conectado ao broker:", broker)
 
-		// Inscrever em todos os tópicos
-		for _, topic := range topics {
-			if token := c.Subscribe(topic, 1, nil); token.Wait() && token.Error() != nil {
-				log.Printf("[MQTT] Erro ao se inscrever em %s: %v\n", topic, token.Error())
+		// Inscrever em todos os tópicos vindos do banco
+		for _, t := range topicos {
+			if token := c.Subscribe(t.Nome, 1, nil); token.Wait() && token.Error() != nil {
+				log.Printf("[MQTT] Erro ao se inscrever em %s: %v\n", t.Nome, token.Error())
 			} else {
-				log.Printf("[MQTT] Inscrito no tópico: %s\n", topic)
+				log.Printf("[MQTT] Inscrito no tópico: %s\n", t.Nome)
 			}
 		}
 	}
@@ -56,9 +55,10 @@ func ConnectMQTT(topics []string) {
 		log.Println("[MQTT] Conexão perdida:", err)
 	}
 
-	// Criar cliente e conectar
 	Client = mqtt.NewClient(opts)
 	if token := Client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatalln("[MQTT] Erro ao conectar:", token.Error())
 	}
 }
+
+
