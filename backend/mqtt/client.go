@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 	"time"
-	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
+	"strings"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -18,7 +18,8 @@ var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Messa
 }
 
 // Função para conectar ao broker MQTT
-func ConnectMQTT(topicos []db.Topic) {
+// Função para conectar ao broker MQTT
+func ConnectMQTT(topicosString string) {
 	opts := mqtt.NewClientOptions()
 
 	// Configurações do broker
@@ -39,25 +40,33 @@ func ConnectMQTT(topicos []db.Topic) {
 	opts.SetDefaultPublishHandler(messageHandler)
 
 	opts.OnConnect = func(c mqtt.Client) {
-		log.Println("[MQTT] Conectado ao broker:", broker)
+		log.Println("client.go diz: [MQTT] Conectado ao broker:", broker)
 
-		// Inscrever em todos os tópicos vindos do banco
-		for _, t := range topicos {
-			if token := c.Subscribe(t.Nome, 1, nil); token.Wait() && token.Error() != nil {
-				log.Printf("[MQTT] Erro ao se inscrever em %s: %v\n", t.Nome, token.Error())
+		// Divide a string de tópicos separados por espaço
+		topicos := strings.Split(topicosString, " ")
+		
+		// Inscrever em todos os tópicos
+		for _, topico := range topicos {
+			topico = strings.TrimSpace(topico)
+			if topico == "" {
+				continue // Pula tópicos vazios
+			}
+			
+			if token := c.Subscribe(topico, 1, nil); token.Wait() && token.Error() != nil {
+				log.Printf("client.go diz: [MQTT] Erro ao se inscrever em %s: %v\n", topico, token.Error())
 			} else {
-				log.Printf("[MQTT] Inscrito no tópico: %s\n", t.Nome)
+				log.Printf("client.go diz: [MQTT] Inscrito no tópico: %s\n", topico)
 			}
 		}
 	}
 
 	opts.OnConnectionLost = func(c mqtt.Client, err error) {
-		log.Println("[MQTT] Conexão perdida:", err)
+		log.Println("client.go diz: [MQTT] Conexão perdida:", err)
 	}
 
 	Client = mqtt.NewClient(opts)
 	if token := Client.Connect(); token.Wait() && token.Error() != nil {
-		log.Fatalln("[MQTT] Erro ao conectar:", token.Error())
+		log.Fatalln("client.go diz: [MQTT] Erro ao conectar:", token.Error())
 	}
 }
 

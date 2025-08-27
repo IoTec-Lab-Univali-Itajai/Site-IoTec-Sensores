@@ -2,27 +2,37 @@ package db
 
 import (
 	"context"
+	"log"
+	"os"
 	"time"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	
 )
 
-type Topic struct {
-	Nome string `bson:"nome"`
-}
+func ConnectMongoDB() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-type Sensor struct {
-    MqttID     string    `bson:"mqttID"`
-    TopicID    primitive.ObjectID `bson:"topicID"`
-    Descricao  string    `bson:"descricao"`
-    LastUpdate time.Time `bson:"lastUpdate"`
-	ShowOnScreen bool `bson:"showOnScreen"`
-}
+	uri := os.Getenv("MONGO_HOST")
+	if uri == "" {
+		log.Fatal("db.functions diz: MONGO_HOST não encontrado no .env")
+	}
 
-type SensorData struct {
-	IDSensor string            `bson:"id_sensor"`
-	Timestamp time.Time        `bson:"timestamp"`
-	Dados     map[string]any   `bson:"dados"`
+	var err error
+	client, err = mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db := client.Database("iotec-lab-database")
+	TopicsCollection = db.Collection("topicsCollection")
+	SensorsCollection = db.Collection("sensorsCollection")
+	DataCollection = db.Collection("dataCollection")
+
+	log.Println("db.functions diz: ✅ Conectado ao MongoDB com sucesso.")
 }
 
 func InserirTopico(topico Topic) error {
@@ -54,19 +64,19 @@ func BuscarTopicos() ([]Topic, error) {
 	return topicos, nil
 }
 
-func BuscarSensoresPorTopico(idTopic string) ([]Sensor, error) {
-	filter := bson.M{"id_topic": idTopic}
-	cursor, err := SensorsCollection.Find(context.TODO(), filter)
-	if err != nil {
-		return nil, err
-	}
-	defer cursor.Close(context.TODO())
+func BuscarSensoresPorTopico(topicName string) ([]Sensor, error) {
+    filter := bson.M{"topicName": topicName}
+    cursor, err := SensorsCollection.Find(context.TODO(), filter)
+    if err != nil {
+        return nil, err
+    }
+    defer cursor.Close(context.TODO())
 
-	var sensores []Sensor
-	if err = cursor.All(context.TODO(), &sensores); err != nil {
-		return nil, err
-	}
-	return sensores, nil
+    var sensores []Sensor
+    if err = cursor.All(context.TODO(), &sensores); err != nil {
+        return nil, err
+    }
+    return sensores, nil
 }
 
 func BuscarSensoresDisplay() ([]Sensor, error) {
@@ -82,4 +92,48 @@ func BuscarSensoresDisplay() ([]Sensor, error) {
         return nil, err
     }
     return sensores, nil
+}
+
+func DeletarSensor(mqttID string) error {
+    filter := bson.M{"mqttID": mqttID}
+    
+    result, err := SensorsCollection.DeleteOne(context.TODO(), filter)
+    if err != nil {
+        return err
+    }
+    
+    if result.DeletedCount == 0 {
+        return fmt.Errorf("")
+    }
+    
+    return nil
+}
+
+func TopicoExiste(nome string) bool {
+    err := TopicsCollection.FindOne(context.TODO(), bson.M{"nome": nome}).Err()
+    if err != nil {
+        if err == mongo.ErrNoDocuments {
+            return false
+        }
+        // Em caso de outro erro, logamos mas consideramos que não existe
+        log.Printf("db_functions diz: Erro ao verificar tópico '%s': %v", nome, err)
+        return false
+    }
+    return true
+}
+
+func AtualizarSensorVisibilidade(mqttID string, showOnScreen bool) error {
+    filter := bson.M{"mqttID": mqttID}
+    update := bson.M{"$set": bson.M{"showOnScreen": showOnScreen}}
+
+    result, err := SensorsCollection.UpdateOne(context.TODO(), filter, update)
+    if err != nil {
+        return err
+    }
+
+    if result.MatchedCount == 0 {
+        return fmt.Errorf("db_functions diz: sensor com mqttID '%s' não encontrado", mqttID)
+    }
+
+    return nil
 }
