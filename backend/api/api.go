@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -121,7 +120,7 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		MqttID       string `json:"mqttID"`
 		TopicName    string `json:"topicName"`
 		Descricao    string `json:"descricao"`
-		ShowOnScreen string `json:"showOnScreen"`
+		ShowOnScreen bool `json:"showOnScreen"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -136,23 +135,16 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Converte ShowOnScreen de string para bool
-	showOnScreenBool, err := strconv.ParseBool(payload.ShowOnScreen)
-	if err != nil {
-		log.Printf("api.go diz: Erro na conversão de ShowOnScreen '%s' - %v", payload.ShowOnScreen, err)
-		showOnScreenBool = false // valor padrão em caso de erro
-	}
-
 	// Cria o sensor com a struct Sensor
 	sensor := db.Sensor{
 		MqttID:       payload.MqttID,
 		TopicName:    payload.TopicName, // Usando TopicName em vez de topicID
 		Descricao:    payload.Descricao,
-		LastUpdate:   time.Now(), // Usando timestamp atual em vez de data fixa
-		ShowOnScreen: showOnScreenBool,
+		LastUpdate:   time.Date(1977, 11, 18, 12, 0, 0, 0, time.UTC),
+		ShowOnScreen: payload.ShowOnScreen,
 	}
 
-	err = db.InserirSensor(sensor)
+	err := db.InserirSensor(sensor)
 	if err != nil {
 		log.Printf("api.go diz: Erro ao criar sensor '%s' - %v", payload.MqttID, err)
 		http.Error(w, `{"error": "Erro ao criar sensor"}`, http.StatusInternalServerError)

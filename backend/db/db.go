@@ -8,21 +8,21 @@ import (
 )
 
 type Topic struct {
-	Nome string `bson:"nome"`
+    Nome string `bson:"nome" json:"nome"`
 }
 
 type Sensor struct {
-    MqttID     string    `bson:"mqttID"`
-    TopicName   string `bson:"topicName"`
-    Descricao  string    `bson:"descricao"`
-    LastUpdate time.Time `bson:"lastUpdate"`
-	ShowOnScreen bool `bson:"showOnScreen"`
+    MqttID       string    `bson:"mqttID" json:"mqttID"`
+    TopicName    string    `bson:"topicName" json:"topicName"`
+    Descricao    string    `bson:"descricao" json:"descricao"`
+    LastUpdate   time.Time `bson:"lastUpdate" json:"lastUpdate"`
+    ShowOnScreen bool      `bson:"showOnScreen" json:"showOnScreen"`
 }
 
 type SensorData struct {
-	IDSensor string            `bson:"id_sensor"`
-	Timestamp time.Time        `bson:"timestamp"`
-	Dados     map[string]any   `bson:"dados"`
+    IDSensor  string          `bson:"id_sensor" json:"id_sensor"`
+    Timestamp time.Time       `bson:"timestamp" json:"timestamp"`
+    Dados     map[string]any  `bson:"dados" json:"dados"`
 }
 
 var client *mongo.Client
