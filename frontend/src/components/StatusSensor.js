@@ -18,7 +18,6 @@ const getStatusColor = (ultimaAtualizacao) => {
 };
 
 function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
-
   const [, setRefresh] = useState(false);
 
   const confirmarRemocao = (sensor) => {
@@ -28,76 +27,76 @@ function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
   };
 
   const handleToggleVisibility = async (sensor) => {
-  const novoStatus = !sensor.showOnScreen;
+    const novoStatus = !sensor.showOnScreen;
 
-  try {
-    const res = await fetch(`http://localhost:8080/api/sensor/${sensor.mqttID}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ showOnScreen: novoStatus }),
-    });
+    try {
+      const res = await fetch(`http://localhost:8080/api/sensorUpdate/${sensor.mqttID}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ showOnScreen: novoStatus }),
+      });
 
-    if (!res.ok) throw new Error("Erro ao atualizar sensor");
+      if (!res.ok) throw new Error("Erro ao atualizar sensor");
 
-    // Atualiza estado local (apenas altera o valor do sensor no array)
-    sensor.showOnScreen = novoStatus;
-    setRefresh(r => !r);
-  } catch (error) {
-    console.error(error);
-    alert("Falha ao atualizar sensor.");
-  }
-};
-
-  if (!sensores || sensores.length === 0) {
-    return <p>Nenhum sensor registrado neste tópico.</p>;
-  }
+      // Atualiza estado local
+      sensor.showOnScreen = novoStatus;
+      setRefresh(r => !r);
+    } catch (error) {
+      console.error(error);
+      alert("Falha ao atualizar sensor.");
+    }
+  };
 
   return (
     <div className="sensor-container">
-      <div className="sensor-list">
-        {sensores.map((sensor) => (
-          <div key={sensor._id?.$oid || sensor.mqttID} className="sensor-card">
-            <div className="sensor-info">
-              <h4>{sensor.nome}</h4>
-              <p><strong>ID:</strong> {sensor.mqttID}</p>
-              <div className="status-dot-container">
-                <span className={`status-dot ${getStatusColor(sensor.lastUpdate || sensor.ultimaAtualizacao)}`}></span>
+      {/* Lista de sensores ou aviso */}
+      {(!sensores || sensores.length === 0) ? (
+        <p>Nenhum sensor registrado neste tópico.</p>
+      ) : (
+        <div className="sensor-list">
+          {sensores.map((sensor) => (
+            <div key={sensor._id?.$oid || sensor.mqttID} className="sensor-card">
+              <div className="sensor-info">
+                <h4>{sensor.nome}</h4>
+                <p><strong>ID:</strong> {sensor.mqttID}</p>
+                <div className="status-dot-container">
+                  <span className={`status-dot ${getStatusColor(sensor.lastUpdate || sensor.ultimaAtualizacao)}`}></span>
+                </div>
               </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={sensor.showOnScreen || false}
+                  onChange={() => handleToggleVisibility(sensor)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+              <button 
+                onClick={() => confirmarRemocao(sensor)}
+                className="delete-button"
+                aria-label="Remover sensor"
+              >
+                <FaTrash />
+              </button>
             </div>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={sensor.showOnScreen || false}
-                onChange={() => handleToggleVisibility(sensor)}
-              />
-              <span className="toggle-slider"></span>
-            </label>
-            <button 
-              onClick={() => confirmarRemocao(sensor)}
-              className="delete-button"
-              aria-label="Remover sensor"
-            >
-              <FaTrash />
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
+      {/* Botão Add sempre aparece */}
       <div className="botao-add-wrapper">
         <BotaoAdd 
           texto="Sensor" 
           topico={topico} 
           onSuccess={() => {
-            // Isso será tratado pelo componente pai
-            if (typeof onSensorAdded === 'function') {
-              onSensorAdded();
-            }
+            if (typeof onSensorAdded === 'function') onSensorAdded();
           }} 
         />
       </div>
       
+      {/* Legenda */}
       <div className="status-legend">
         <h4>Legenda de Status:</h4>
         <div className="legend-items">
@@ -113,7 +112,7 @@ function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
             <span className="status-dot red"></span>
             <span>Desatualizado (+1 semana)</span>
           </div>
-           <div className="legend-item">
+          <div className="legend-item">
             <span className="status-dot black"></span>
             <span>Sem dados recebidos</span>
           </div>

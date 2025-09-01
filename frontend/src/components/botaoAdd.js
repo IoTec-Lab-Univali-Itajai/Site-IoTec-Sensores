@@ -30,40 +30,41 @@ function BotaoAdd({ texto, topico, onSuccess }) {
   };
 
   const handleSubmitSensor = async (e) => {
-    e.preventDefault();
-    
-    try {
-      const response = await fetch('http://localhost:8080/api/sensor', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          showOnScreen: formData.showOnScreen.toString() // Converte para string
-        })
-      });
+  e.preventDefault();
+  
+  try {
+    const response = await fetch('http://localhost:8080/api/sensorCreate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(formData)
+    });
 
-      if (!response.ok) throw new Error('Erro ao adicionar sensor');
-      
-      alert('Sensor adicionado com sucesso!');
-      setShowModal(false);
-      setFormData(initialState); // Reseta o formulário
-      
-      if (typeof onSuccess === 'function') {
-        onSuccess();
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar sensor:', error);
-      alert(`Falha ao adicionar sensor: ${error.message}`);
+    if (!response.ok) {
+      console.log(formData)
+      throw new Error('Erro ao adicionar sensor');
     }
-  };
+    
+    alert('Sensor adicionado com sucesso!');
+    setShowModal(false);
+    setFormData(initialState); // Reseta o formulário
+    
+    // CHAMA A FUNÇÃO onSuccess PARA ATUALIZAR A LISTA
+    if (typeof onSuccess === 'function') {
+      onSuccess();
+    }
+  } catch (error) {
+    console.error('Erro ao adicionar sensor:', error);
+    alert(`Falha ao adicionar sensor: ${error.message}`);
+  }
+};
 
   const handleSubmitTopic = async (e) => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:8080/api/topic', {
+      const response = await fetch('http://localhost:8080/api/topicCreate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
