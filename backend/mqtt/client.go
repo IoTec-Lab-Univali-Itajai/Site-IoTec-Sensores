@@ -1,73 +1,105 @@
-package mqtt
+package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"time"
+	"strconv"
 	"strings"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// Variável global do cliente MQTT
-var Client mqtt.Client
-
-// Callback executado ao receber uma mensagem
-var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("[MQTT] Mensagem recebida em %s: %s\n", msg.Topic(), msg.Payload())
+type SensorValue struct {
+	infoType string  `json:"infoType"`
+	Valor   float64 `json:"valor"`
+	Unidade string  `json:"unidade"`
 }
 
-// Função para conectar ao broker MQTT
-// Função para conectar ao broker MQTT
-func ConnectMQTT(topicosString string) {
-	opts := mqtt.NewClientOptions()
+// Struct completa para representar a mensagem TTN com dados decodificados
+type TTNMessage struct {
+	EndDeviceIDs struct {
+		DeviceID string `json:"device_id"`
+	} `json:"end_device_ids"`
+	ReceivedAt    string `json:"received_at"`
+	UplinkMessage struct {
+		FrmPayload     string `json:"frm_payload"`
+		DecodedPayload struct {
+			Message string `json:"message"`
+		} `json:"decoded_payload"`
+		// Você pode adicionar outros campos do uplink se necessário
+	} `json:"uplink_message"`
+	
+	// Campo adicional para armazenar os dados dos sensores já parseados
+	SensorData []SensorValue `json:"sensor_data,omitempty"`
+}
 
-	// Configurações do broker
-	broker := os.Getenv("MQTT_BROKER_URL")
-	clientID := os.Getenv("MQTT_CLIENT_ID")
-	username := os.Getenv("MQTT_USERNAME")
-	password := os.Getenv("MQTT_PASSWORD")
 
-	opts.AddBroker(broker)
-	opts.SetClientID(clientID)
-	opts.SetUsername(username)
-	opts.SetPassword(password)
-	opts.SetCleanSession(true)
-	opts.SetProtocolVersion(4)
-	opts.SetAutoReconnect(true)
-	opts.SetConnectRetry(true)
-	opts.SetConnectRetryInterval(5 * time.Second)
-	opts.SetDefaultPublishHandler(messageHandler)
+// Função para parsear a mensagem TTN completa incluindo os sensores
+func ParseCompleteTTNMessage(payload []byte) (*TTNMessage, error) {
+	var ttnMsg TTNMessage
+	
+	// 1. Decodificar JSON bruto que veio do TTN
+	err := json.Unmarshal(payload, &ttnMsg)
+	if err != nil {
+		return nil, fmt.Errorf("client.go diz: erro ao decodificar JSON TTN: %w", err)
+	}
+	
+	// 2. Parsear o payload dos sensores e adicionar ao objeto
+	sensorData, err := ParseSensorPayload(ttnMsg.UplinkMessage.DecodedPayload.Message)
+	if err != nil {
+		return nil, fmt.Errorf("client.go diz: erro ao parsear payload dos sensores: %w", err)
+	}
+	
+	ttnMsg.SensorData = sensorData
+	return &ttnMsg, nil
+}
 
-	opts.OnConnect = func(c mqtt.Client) {
-		log.Println("client.go diz: [MQTT] Conectado ao broker:", broker)
+func ParseSensorPayload(payload string) ([]SensorValue, error) {
+	parts := strings.Split(payload, ",")
 
-		// Divide a string de tópicos separados por espaço
-		topicos := strings.Split(topicosString, " ")
-		
-		// Inscrever em todos os tópicos
-		for _, topico := range topicos {
-			topico = strings.TrimSpace(topico)
-			if topico == "" {
-				continue // Pula tópicos vazios
-			}
-			
-			if token := c.Subscribe(topico, 1, nil); token.Wait() && token.Error() != nil {
-				log.Printf("client.go diz: [MQTT] Erro ao se inscrever em %s: %v\n", topico, token.Error())
-			} else {
-				log.Printf("client.go diz: [MQTT] Inscrito no tópico: %s\n", topico)
-			}
+	if len(parts)%3 != 0 {
+		return nil, fmt.Errorf("client.go diz: payload inválido: número de elementos não é múltiplo de 3")
+	}
+
+	var results []SensorValue
+	for i := 0; i < len(parts); i += 3 {
+		val, err := strconv.ParseFloat(parts[i+1], 64)
+		if err != nil {
+			return nil, fmt.Errorf("client.go diz: erro ao converter valor '%s': %w", parts[i+1], err)
 		}
-	}
 
-	opts.OnConnectionLost = func(c mqtt.Client, err error) {
-		log.Println("client.go diz: [MQTT] Conexão perdida:", err)
+		results = append(results, SensorValue{
+			infoType:    parts[i],
+			Valor:   val,
+			Unidade: parts[i+2],
+		})
 	}
-
-	Client = mqtt.NewClient(opts)
-	if token := Client.Connect(); token.Wait() && token.Error() != nil {
-		log.Fatalln("client.go diz: [MQTT] Erro ao conectar:", token.Error())
-	}
+	return results, nil
 }
 
+// Exemplo de uso no messageHandler
+var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("[MQTT] Mensagem recebida em %s\n", msg.Topic())
 
+	// Parsear a mensagem completa incluindo dados dos sensores
+	ttnMsg, err := ParseCompleteTTNMessage(msg.Payload())
+	if err != nil {
+		fmt.Println("Erro ao processar mensagem:", err)
+		return
+	}
+
+	// Agora ttnMsg já contém tudo em um único objeto
+	fmt.Printf("Dispositivo: %s\n", ttnMsg.EndDeviceIDs.DeviceID)
+	fmt.Printf("Recebido em: %s\n", ttnMsg.ReceivedAt)
+	fmt.Printf("Dados dos sensores: %+v\n", ttnMsg.SensorData)
+
+	// Converter para JSON completo
+	jsonData, err := json.MarshalIndent(ttnMsg, "", "  ")
+	if err != nil {
+		fmt.Println("Erro ao converter para JSON:", err)
+		return
+	}
+	
+	fmt.Println("Mensagem completa em JSON:")
+	fmt.Println(string(jsonData))
+	
+	// Agora você pode enviar jsonData para o frontend ou MongoDB
+}
