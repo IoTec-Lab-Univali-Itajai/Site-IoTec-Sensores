@@ -1,9 +1,8 @@
-// components/Home.js
 import React, { useEffect, useState } from 'react';
 import CardSensor from './components/CardSensor';
 
 function Home() {
-  const [sensores, setSensores] = useState([]); // sempre inicializa como []
+  const [sensores, setSensores] = useState([]);
 
   useEffect(() => {
     const fetchSensores = async () => {
@@ -12,29 +11,38 @@ function Home() {
         if (!res.ok) throw new Error("Erro ao buscar sensores ativos");
         const data = await res.json();
 
-        // garante que seja sempre array
-        setSensores(Array.isArray(data) ? data : []);
+        // Mapeia a estrutura do backend para o que o frontend espera
+        const sensoresFormatados = data.map(sensor => ({
+          mqttID: sensor.SensorID, // SensorID do backend vira mqttID no frontend
+          dados: sensor.SensorData // SensorData do backend vira dados no frontend
+        }));
+
+        setSensores(sensoresFormatados);
+        console.log('HOME.JS DIZ: Dados recebidos:', sensoresFormatados);
       } catch (err) {
         console.error("Erro ao carregar sensores:", err);
-        setSensores([]); // fallback
+        setSensores([]);
       }
     };
 
     fetchSensores();
+    // Opcional: atualizar a cada X segundos
+    const interval = setInterval(fetchSensores, 30000); // Atualiza a cada 30 segundos
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <main>
       <h1>Sensores ativos:</h1>
       <div className="cards-container">
-        {(!sensores || sensores.length === 0) ? (
+        {sensores.length === 0 ? (
           <p>Nenhum sensor ativo no momento.</p>
         ) : (
           sensores.map(sensor => (
             <CardSensor 
-              key={sensor.mqttID || sensor._id?.$oid} 
+              key={sensor.mqttID} 
               nome={sensor.mqttID} 
-              dados={sensor.dados || {}} 
+              dados={sensor.dados || []} // Garante que dados seja array
             />
           ))
         )}

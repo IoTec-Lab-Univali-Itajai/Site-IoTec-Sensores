@@ -8,31 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/data"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
-
-// Estruturas
-type SensorValue struct {
-	InfoType string  `json:"infoType"`
-	Valor    float64 `json:"valor"`
-	Unidade  string  `json:"unidade"`
-}
-
-type TTNMessage struct {
-	EndDeviceIDs struct {
-		DeviceID string `json:"device_id"`
-	} `json:"end_device_ids"`
-	ReceivedAt    string `json:"received_at"`
-	UplinkMessage struct {
-		FrmPayload     string `json:"frm_payload"`
-		DecodedPayload struct {
-			Message string `json:"message"`
-		} `json:"decoded_payload"`
-	} `json:"uplink_message"`
-
-	SensorData []SensorValue `json:"sensor_data,omitempty"`
-}
 
 // Variável global do cliente MQTT
 var Client mqtt.Client
@@ -66,19 +44,19 @@ var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Messa
 }
 
 // Função para parsear payload dos sensores
-func ParseSensorPayload(payload string) ([]SensorValue, error) {
+func ParseSensorPayload(payload string) ([]data.SensorValue, error) {
 	parts := strings.Split(payload, ",")
 	if len(parts)%3 != 0 {
 		return nil, fmt.Errorf("client.go diz: payload inválido: número de elementos não é múltiplo de 3")
 	}
 
-	var results []SensorValue
+	var results []data.SensorValue
 	for i := 0; i < len(parts); i += 3 {
 		val, err := strconv.ParseFloat(parts[i+1], 64)
 		if err != nil {
 			return nil, fmt.Errorf("client.go diz: erro ao converter valor '%s': %w", parts[i+1], err)
 		}
-		results = append(results, SensorValue{
+		results = append(results, data.SensorValue{
 			InfoType: parts[i],
 			Valor:    val,
 			Unidade:  parts[i+2],
@@ -88,8 +66,8 @@ func ParseSensorPayload(payload string) ([]SensorValue, error) {
 }
 
 // Função para parsear a mensagem TTN completa
-func ParseCompleteTTNMessage(payload []byte) (*TTNMessage, error) {
-	var ttnMsg TTNMessage
+func ParseCompleteTTNMessage(payload []byte) (*data.TTNMessage, error) {
+	var ttnMsg data.TTNMessage
 
 	// Decodifica JSON bruto
 	err := json.Unmarshal(payload, &ttnMsg)

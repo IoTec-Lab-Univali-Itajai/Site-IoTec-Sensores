@@ -7,14 +7,35 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"fmt"
 
-	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db" // IMPORTA O PACOTE DB
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/data"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
 
+
 func StartAPI() {
+    sensores, err := db.BuscarSensoresDisplay()
+	if err != nil {
+		log.Printf("api.go diz: Erro ao buscar sensores para exibição: %v", err)
+	} else {
+		data.DadosDisplayMutex.Lock()
+		data.DadosDisplay = make([]data.InfoDisplay, 0, len(sensores))
+		for i := 0; i < len(sensores); i++ {
+			var dadoDisplay data.InfoDisplay
+			dadoDisplay.SensorID = sensores[i].MqttID
+			dadoDisplay.SensorData = sensores[i].LastData
+			data.DadosDisplay = append(data.DadosDisplay, dadoDisplay)
+		}
+		data.DadosDisplayMutex.Unlock()
+
+		fmt.Printf("api.go diz: terminou o carregamento de %d sensores\n", len(sensores))
+	}
+
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
@@ -26,6 +47,7 @@ func StartAPI() {
 		MaxAge:           300, // cache preflight for 5 minutes
 	}))
 
+
 	// ROTAS
 	r.Get("/api/topicsJSON", GetTopicsJSON)
 	r.Get("/api/sensorJSON", GetSensorsJSON)
@@ -36,6 +58,7 @@ func StartAPI() {
 	r.Put("/api/sensorUpdate/{id}", UpdateSensorVisibility)
 
 	http.ListenAndServe(":8080", r)
+
 }
 
 // Handlers
@@ -135,12 +158,21 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//cria uma lista de valores de sensor, preenche com um valor de sensor nulo para salvar no campo obrigatório de LastData no BD
+	var nullInfoList []data.SensorValue;
+	var nullInfo data.SensorValue;
+	nullInfo.InfoType = "null"
+	nullInfo.Valor = 0;
+	nullInfo.Unidade = "null"
+	nullInfoList = append(nullInfoList, nullInfo);
+
 	// Cria o sensor com a struct Sensor
-	sensor := db.Sensor{
+	sensor := data.Sensor{
 		MqttID:       payload.MqttID,
 		TopicName:    payload.TopicName, // Usando TopicName em vez de topicID
 		Descricao:    payload.Descricao,
 		LastUpdate:   time.Date(1977, 11, 18, 12, 0, 0, 0, time.UTC),
+		LastData: 	  nullInfoList,
 		ShowOnScreen: payload.ShowOnScreen,
 	}
 
@@ -219,7 +251,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cria o tópico
-	novoTopico := db.Topic{
+	novoTopico := data.Topic{
 		Nome: payload.Nome,
 	}
 
@@ -238,25 +270,13 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetSensorView(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	sensores, err := db.BuscarSensoresDisplay()
-	if err != nil {
-		http.Error(w, "Erro ao buscar sensores para exibição: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Prepara resposta convertendo para JSON
-	var resposta []map[string]interface{}
-	for _, s := range sensores {
-		resposta = append(resposta, map[string]interface{}{
-			"mqttID":       s.MqttID,
-			"descricao":    s.Descricao,
-			"lastUpdate":   s.LastUpdate,
-			"showOnScreen": s.ShowOnScreen,
-			"topicID":      s.TopicName, // mantém o vínculo com o tópico
-		})
-	}
-
-	json.NewEncoder(w).Encode(resposta)
+    w.Header().Set("Content-Type", "application/json")
+    
+    data.DadosDisplayMutex.Lock()
+    if err := json.NewEncoder(w).Encode(data.DadosDisplay); err != nil {
+        log.Printf("Erro ao serializar DadosDisplay: %v", err)
+        http.Error(w, `{"error": "Erro ao processar dados"}`, http.StatusInternalServerError)
+        return
+    }
+	data.DadosDisplayMutex.Unlock()
 }
