@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/data"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -19,27 +20,67 @@ var Client mqtt.Client
 var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	go func() {
 		fmt.Printf("[MQTT] Mensagem recebida em %s\n", msg.Topic())
+		fmt.Printf("\n=====================mensagem: ============================================\n%s\n===============================================================\n", string(msg.Payload()))
+		// Extrai apenas o necessário do JSON
+		var message struct {
+			DeviceInfo struct {
+				DeviceName string `json:"deviceName"`
+			} `json:"deviceInfo"`
+			Object struct {
+				Message string `json:"message"`
+			} `json:"object"`
+		}
 
-		ttnMsg, err := ParseCompleteTTNMessage(msg.Payload())
-		if err != nil {
-			fmt.Println("Erro ao processar mensagem:", err)
+		if err := json.Unmarshal(msg.Payload(), &message); err != nil {
+			fmt.Println("client.go diz: Erro ao decodificar JSON:", err)
 			return
 		}
 
-		fmt.Printf("Dispositivo: %s\n", ttnMsg.EndDeviceIDs.DeviceID)
-		fmt.Printf("Recebido em: %s\n", ttnMsg.ReceivedAt)
-		fmt.Printf("Dados dos sensores: %+v\n", ttnMsg.SensorData)
-
-		jsonData, err := json.MarshalIndent(ttnMsg, "", "  ")
+		// Parseia os dados dos sensores
+		sensorData, err := ParseSensorPayload(message.Object.Message)
 		if err != nil {
-			fmt.Println("Erro ao converter para JSON:", err)
+			fmt.Println("client.go diz: Erro ao parsear sensores:", err)
 			return
 		}
 
-		fmt.Println("Mensagem completa em JSON:")
-		fmt.Println(string(jsonData))
+		fmt.Printf("client.go diz: Dispositivo: %s\n", message.DeviceInfo.DeviceName)
+		fmt.Printf("client.go diz: Dados: %+v\n", sensorData)
 
-		// Aqui você poderia salvar no MongoDB, enviar pro frontend, etc.
+		// Atualiza direto no data.DadosDisplay
+		data.DadosDisplayMutex.Lock()
+		
+		// Procura se já existe
+		for i, display := range data.DadosDisplay {
+			if display.SensorID == message.DeviceInfo.DeviceName {
+				data.DadosDisplay[i].SensorData = sensorData
+				fmt.Printf("client.go diz: DadosDisplay atualizado para %s\n", message.DeviceInfo.DeviceName)
+				break
+			}
+		}
+
+		data.DadosDisplayMutex.Unlock()
+
+		//busca se está cadastrado no BD e atualiza os dados
+		if db.SensorExiste(message.DeviceInfo.DeviceName){
+			// Atualiza os dados do sensor
+			err := db.AtualizarDados(message.DeviceInfo.DeviceName, sensorData)
+			if err != nil {
+				fmt.Println("client.go diz: Erro ao atualizar dados:", err)
+			}
+			
+			// Insere no histórico de dados (se necessário)
+			dadoNovo := data.InfoDisplay{
+				SensorID:   message.DeviceInfo.DeviceName,
+				SensorData: sensorData,
+			}
+			err = db.InserirDado(dadoNovo) // ← Agora correto!
+			if err != nil {
+				fmt.Println("client.go diz: Erro ao inserir dado:", err)
+			}
+		}
+
+		
+		
 	}()
 }
 
@@ -47,14 +88,14 @@ var messageHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Messa
 func ParseSensorPayload(payload string) ([]data.SensorValue, error) {
 	parts := strings.Split(payload, ",")
 	if len(parts)%3 != 0 {
-		return nil, fmt.Errorf("client.go diz: payload inválido: número de elementos não é múltiplo de 3")
+		return nil, fmt.Errorf("client.go diz: payload inválido")
 	}
 
 	var results []data.SensorValue
 	for i := 0; i < len(parts); i += 3 {
 		val, err := strconv.ParseFloat(parts[i+1], 64)
 		if err != nil {
-			return nil, fmt.Errorf("client.go diz: erro ao converter valor '%s': %w", parts[i+1], err)
+			return nil, err
 		}
 		results = append(results, data.SensorValue{
 			InfoType: parts[i],
@@ -63,26 +104,6 @@ func ParseSensorPayload(payload string) ([]data.SensorValue, error) {
 		})
 	}
 	return results, nil
-}
-
-// Função para parsear a mensagem TTN completa
-func ParseCompleteTTNMessage(payload []byte) (*data.TTNMessage, error) {
-	var ttnMsg data.TTNMessage
-
-	// Decodifica JSON bruto
-	err := json.Unmarshal(payload, &ttnMsg)
-	if err != nil {
-		return nil, fmt.Errorf("client.go diz: erro ao decodificar JSON TTN: %w", err)
-	}
-
-	// Parseia payload dos sensores
-	sensorData, err := ParseSensorPayload(ttnMsg.UplinkMessage.DecodedPayload.Message)
-	if err != nil {
-		return nil, fmt.Errorf("client.go diz: erro ao parsear payload dos sensores: %w", err)
-	}
-
-	ttnMsg.SensorData = sensorData
-	return &ttnMsg, nil
 }
 
 

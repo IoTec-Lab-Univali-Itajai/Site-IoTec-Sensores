@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
 )
 
 var Client *mongo.Client
@@ -51,7 +53,7 @@ func InserirSensor(sensor data.Sensor) error {
 	return err
 }
 
-func InserirDado(dado data.SensorData) error {
+func InserirDado(dado data.InfoDisplay) error {
 	_, err := DataCollection.InsertOne(context.TODO(), dado)
 	return err
 }
@@ -100,6 +102,15 @@ func BuscarSensoresDisplay() ([]data.Sensor, error) {
 	return sensores, nil
 }
 
+func SensorExiste(mqttID string) bool {
+	filter := bson.M{"mqttID": mqttID}
+	
+	var result struct { ID primitive.ObjectID `bson:"_id"` }
+	err := SensorsCollection.FindOne(context.TODO(), filter).Decode(&result)
+	
+	return err == nil
+}
+
 func DeletarSensor(mqttID string) error {
 	filter := bson.M{"mqttID": mqttID}
 
@@ -140,5 +151,28 @@ func AtualizarSensorVisibilidade(mqttID string, showOnScreen bool) error {
 		return fmt.Errorf("db_functions diz: sensor com mqttID '%s' não encontrado", mqttID)
 	}
 
+	return nil
+}
+
+func AtualizarDados(SensorID string, SensorData []data.SensorValue) error {
+	filter := bson.M{"mqttID": SensorID}
+	
+	update := bson.M{
+		"$set": bson.M{
+			"lastData":     SensorData,    // Campo correto: lastData
+			"lastUpdate":   time.Now(),    // Campo correto: lastUpdate
+		},
+	}
+	
+	result, err := SensorsCollection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		return fmt.Errorf("db_functions diz: erro ao atualizar sensor %s: %w", SensorID, err)
+	}
+	
+	if result.MatchedCount == 0 {
+		return fmt.Errorf("db_functions diz: sensor não encontrado: %s", SensorID)
+	}
+	
+	fmt.Printf("db_functions diz: Dados do sensor %s atualizados com sucesso. %d documento(s) modificado(s)\n", SensorID, result.ModifiedCount)
 	return nil
 }

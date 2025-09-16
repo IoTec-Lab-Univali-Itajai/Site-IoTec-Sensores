@@ -30,24 +30,9 @@ type SensorData struct {
 //STRUCTS E VARIAVEIS GLOBAIS DE MQTT ================================================================================================
 
 type SensorValue struct {
-	InfoType string  `json:"infoType"`
-	Valor    float64 `json:"valor"`
-	Unidade  string  `json:"unidade"`
-}
-
-type TTNMessage struct {
-	EndDeviceIDs struct {
-		DeviceID string `json:"device_id"`
-	} `json:"end_device_ids"`
-	ReceivedAt    string `json:"received_at"`
-	UplinkMessage struct {
-		FrmPayload     string `json:"frm_payload"`
-		DecodedPayload struct {
-			Message string `json:"message"`
-		} `json:"decoded_payload"`
-	} `json:"uplink_message"`
-
-	SensorData []SensorValue `json:"sensor_data,omitempty"`
+	InfoType string  `json:"infoType" bson:"infotype"`
+	Valor    float64 `json:"valor" bson:"valor"`
+	Unidade  string  `json:"unidade" bson:"unidade"`
 }
 
 //=============================================================================================================
