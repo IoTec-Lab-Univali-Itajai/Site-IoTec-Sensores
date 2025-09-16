@@ -7,7 +7,7 @@ function Home() {
   useEffect(() => {
     const fetchSensores = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/sensorView");
+        const res = await fetch("http://10.1.203.113:8080/api/sensorView");
         if (!res.ok) throw new Error("Erro ao buscar sensores ativos");
         const data = await res.json();
 

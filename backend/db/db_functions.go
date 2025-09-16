@@ -54,7 +54,23 @@ func InserirSensor(sensor data.Sensor) error {
 }
 
 func InserirDado(dado data.InfoDisplay) error {
-	_, err := DataCollection.InsertOne(context.TODO(), dado)
+	// Converte os dados para o formato exigido pelo schema
+	dadosMap := make(map[string]interface{})
+	for _, sensorValue := range dado.SensorData {
+		dadosMap[sensorValue.InfoType] = map[string]interface{}{
+			"valor":   sensorValue.Valor,
+			"unidade": sensorValue.Unidade,
+		}
+	}
+
+	// Cria o documento no formato correto
+	document := bson.M{
+		"sensorId":   dado.SensorID,
+		"timestamp":  time.Now(), // Usa o timestamp atual
+		"dados":      dadosMap,   // Mapa com os dados
+	}
+
+	_, err := DataCollection.InsertOne(context.TODO(), document)
 	return err
 }
 
