@@ -90,6 +90,7 @@ func BuscarTopicos() ([]data.Topic, error) {
 
 func BuscarSensoresPorTopico(topicName string) ([]data.Sensor, error) {
 	filter := bson.M{"topicName": topicName}
+	fmt.Println("db_funcitons diz: topico selecionado foi: ", topicName);
 	cursor, err := SensorsCollection.Find(context.TODO(), filter)
 	if err != nil {
 		return nil, err
@@ -101,6 +102,17 @@ func BuscarSensoresPorTopico(topicName string) ([]data.Sensor, error) {
 		return nil, err
 	}
 	return sensores, nil
+}
+
+func BuscarSensorPorNome(mqttID string)(data.Sensor, error){
+	filter := bson.M{"mqttID": mqttID}
+	var sensor data.Sensor
+	err := SensorsCollection.FindOne(context.TODO(), filter).Decode(&sensor)
+	if err != nil {
+		log.Printf("api.go diz: Sensor '%s' não encontrado no BD", mqttID)
+		return data.Sensor{}, err
+	}
+	return sensor, nil;
 }
 
 func BuscarSensoresDisplay() ([]data.Sensor, error) {

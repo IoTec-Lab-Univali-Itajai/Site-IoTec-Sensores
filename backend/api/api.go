@@ -92,6 +92,8 @@ func GetSensorsJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("api.go ao atualizar sensores do topico diz: topico recebido foi: ", topicName);
+
 	// Buscar sensores pelo tópico
 	sensores, err := db.BuscarSensoresPorTopico(topicName)
 	if err != nil {
@@ -119,7 +121,19 @@ func DeleteSensor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Usando a nova função DeletarSensor
+	// Remover o sensor da lista DadosDisplay antes de deletar do banco
+	data.DadosDisplayMutex.Lock()
+	for i, display := range data.DadosDisplay {
+		if display.SensorID == idSensor {
+			// Remove o sensor da slice
+			data.DadosDisplay = append(data.DadosDisplay[:i], data.DadosDisplay[i+1:]...)
+			log.Printf("Sensor %s removido da lista DadosDisplay", idSensor)
+			break
+		}
+	}
+	data.DadosDisplayMutex.Unlock()
+
+	// Usando a função DeletarSensor para remover do banco de dados
 	err := db.DeletarSensor(idSensor)
 	if err != nil {
 		if err.Error() == "api.go diz: sensor não encontrado" {
@@ -143,7 +157,7 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		MqttID       string `json:"mqttID"`
 		TopicName    string `json:"topicName"`
 		Descricao    string `json:"descricao"`
-		ShowOnScreen bool `json:"showOnScreen"`
+		ShowOnScreen bool   `json:"showOnScreen"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -154,25 +168,25 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 
 	if !db.TopicoExiste(payload.TopicName) {
 		log.Printf("api.go diz: topico inexistente")
-		http.Error(w, `{"error": topico inexistente"}`, http.StatusBadRequest)
+		http.Error(w, `{"error": "topico inexistente"}`, http.StatusBadRequest)
 		return
 	}
 
-	//cria uma lista de valores de sensor, preenche com um valor de sensor nulo para salvar no campo obrigatório de LastData no BD
-	var nullInfoList []data.SensorValue;
-	var nullInfo data.SensorValue;
+	// Cria uma lista de valores de sensor, preenche com um valor de sensor nulo para salvar no campo obrigatório de LastData no BD
+	var nullInfoList []data.SensorValue
+	var nullInfo data.SensorValue
 	nullInfo.InfoType = "null"
-	nullInfo.Valor = 0;
+	nullInfo.Valor = 0
 	nullInfo.Unidade = "null"
-	nullInfoList = append(nullInfoList, nullInfo);
+	nullInfoList = append(nullInfoList, nullInfo)
 
 	// Cria o sensor com a struct Sensor
 	sensor := data.Sensor{
 		MqttID:       payload.MqttID,
-		TopicName:    payload.TopicName, // Usando TopicName em vez de topicID
+		TopicName:    payload.TopicName,
 		Descricao:    payload.Descricao,
 		LastUpdate:   time.Date(1977, 11, 18, 12, 0, 0, 0, time.UTC),
-		LastData: 	  nullInfoList,
+		LastData:     nullInfoList,
 		ShowOnScreen: payload.ShowOnScreen,
 	}
 
@@ -181,6 +195,17 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		log.Printf("api.go diz: Erro ao criar sensor '%s' - %v", payload.MqttID, err)
 		http.Error(w, `{"error": "Erro ao criar sensor"}`, http.StatusInternalServerError)
 		return
+	}
+
+	// Se o sensor deve ser exibido na tela, adicionar à lista DadosDisplay
+	if payload.ShowOnScreen {
+		data.DadosDisplayMutex.Lock()
+		data.DadosDisplay = append(data.DadosDisplay, data.InfoDisplay{
+			SensorID:   payload.MqttID,
+			SensorData: nullInfoList,
+		})
+		data.DadosDisplayMutex.Unlock()
+		log.Printf("api.go diz: Sensor '%s' adicionado à lista DadosDisplay", payload.MqttID)
 	}
 
 	log.Printf("api.go diz: Sensor '%s' criado com sucesso para o tópico '%s'", payload.MqttID, payload.TopicName)
@@ -207,7 +232,10 @@ func UpdateSensorVisibility(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := db.AtualizarSensorVisibilidade(mqttID, payload.ShowOnScreen)
+	sensor, err := db.BuscarSensorPorNome(mqttID);
+
+	// Atualizar no banco de dados
+	err = db.AtualizarSensorVisibilidade(mqttID, payload.ShowOnScreen)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
 			log.Printf("api.go diz: Sensor '%s' não encontrado", mqttID)
@@ -217,6 +245,42 @@ func UpdateSensorVisibility(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error": "Erro ao atualizar sensor"}`, http.StatusInternalServerError)
 		}
 		return
+	}
+
+	// Atualizar a lista DadosDisplay
+	data.DadosDisplayMutex.Lock()
+	defer data.DadosDisplayMutex.Unlock()
+
+	if payload.ShowOnScreen {
+		// Se showOnScreen = true, adicionar ou atualizar na lista
+		found := false
+		for i, display := range data.DadosDisplay {
+			if display.SensorID == mqttID {
+				// Atualizar dados existentes mantendo os dados atuais
+				data.DadosDisplay[i].SensorData = sensor.LastData
+				found = true
+				log.Printf("api.go diz: Sensor '%s' atualizado na lista DadosDisplay", mqttID)
+				break
+			}
+		}
+		
+		if !found {
+			// Adicionar novo sensor à lista
+			data.DadosDisplay = append(data.DadosDisplay, data.InfoDisplay{
+				SensorID:   mqttID,
+				SensorData: sensor.LastData,
+			})
+			log.Printf("api.go diz: Sensor '%s' adicionado à lista DadosDisplay", mqttID)
+		}
+	} else {
+		// Se showOnScreen = false, remover da lista
+		for i, display := range data.DadosDisplay {
+			if display.SensorID == mqttID {
+				data.DadosDisplay = append(data.DadosDisplay[:i], data.DadosDisplay[i+1:]...)
+				log.Printf("api.go diz: Sensor '%s' removido da lista DadosDisplay", mqttID)
+				break
+			}
+		}
 	}
 
 	log.Printf("api.go diz: Sensor '%s' atualizado com sucesso - showOnScreen: %t", mqttID, payload.ShowOnScreen)
