@@ -30,7 +30,7 @@ function StatusSensor({ sensores, onRemoveSensor, topico, onSensorAdded }) {
     const novoStatus = !sensor.showOnScreen;
 
     try {
-      const res = await fetch(`http://localhost:8080/api/sensorUpdate/${sensor.mqttID}`, {
+      const res = await fetch(`http://10.1.203.113:8080/api/sensorUpdate/${sensor.mqttID}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -38,7 +38,7 @@ function BotaoAdd({ texto, topico, onSuccess }) {
     e.preventDefault();
     
     try {
-        const response = await fetch('http://localhost:8080/api/sensorCreate', {
+        const response = await fetch('http://10.1.203.113:8080/api/sensorCreate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ function BotaoAdd({ texto, topico, onSuccess }) {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:8080/api/topicCreate', {
+      const response = await fetch('http://10.1.203.113:8080/api/topicCreate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
