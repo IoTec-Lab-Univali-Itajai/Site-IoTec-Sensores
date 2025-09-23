@@ -11,60 +11,61 @@ function BotaoAdd({ texto, topico, onSuccess }) {
         mqttID: '', 
         topicName: topico, 
         descricao: '', 
-        showOnScreen: true 
+        showOnScreen: true // ← Valor padrão como boolean
       }
     : { nome: '' };
   
   const [formData, setFormData] = useState(initialState);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     
-    // Trata checkboxes/selects diferentemente
-    const val = type === 'checkbox' ? checked : value;
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: val
-    }));
+    // Se for o campo showOnScreen, converter string para boolean
+    if (name === "showOnScreen") {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value === "true" // Converte string para boolean
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmitSensor = async (e) => {
-  e.preventDefault();
-  
-  try {
-    const response = await fetch('http://localhost:8080/api/sensorCreate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData)
-    });
+    e.preventDefault();
+    
+    try {
+        const response = await fetch('http://10.1.203.113:8080/api/sensorCreate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData) // Já está correto (showOnScreen é boolean)
+        });
 
-    if (!response.ok) {
-      console.log(formData)
-      throw new Error('Erro ao adicionar sensor');
+        if (!response.ok) throw new Error('Erro ao adicionar sensor');
+        
+        alert('Sensor adicionado com sucesso!');
+        setShowModal(false);
+        setFormData(initialState);
+        
+        if (typeof onSuccess === 'function') {
+            onSuccess();
+        }
+    } catch (error) {
+        console.error('Erro ao adicionar sensor:', error);
+        alert(`Falha ao adicionar sensor: ${error.message}`);
     }
-    
-    alert('Sensor adicionado com sucesso!');
-    setShowModal(false);
-    setFormData(initialState); // Reseta o formulário
-    
-    // CHAMA A FUNÇÃO onSuccess PARA ATUALIZAR A LISTA
-    if (typeof onSuccess === 'function') {
-      onSuccess();
-    }
-  } catch (error) {
-    console.error('Erro ao adicionar sensor:', error);
-    alert(`Falha ao adicionar sensor: ${error.message}`);
-  }
-};
+  };
 
   const handleSubmitTopic = async (e) => {
     e.preventDefault();
     
     try {
-      const response = await fetch('http://localhost:8080/api/topicCreate', {
+      const response = await fetch('http://10.1.203.113:8080/api/topicCreate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +77,7 @@ function BotaoAdd({ texto, topico, onSuccess }) {
       
       alert('Tópico adicionado com sucesso!');
       setShowModal(false);
-      setFormData(initialState); // Reseta o formulário
+      setFormData(initialState);
       
       if (typeof onSuccess === 'function') {
         onSuccess();
@@ -89,7 +90,7 @@ function BotaoAdd({ texto, topico, onSuccess }) {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setFormData(initialState); // Reseta o formulário ao fechar
+    setFormData(initialState);
   };
 
   return (
@@ -148,11 +149,11 @@ function BotaoAdd({ texto, topico, onSuccess }) {
                     <select
                       id="showOnScreen"
                       name="showOnScreen"
-                      value={formData.showOnScreen}
+                      value={formData.showOnScreen.toString()} // ← Converte boolean para string
                       onChange={handleInputChange}
                     >
-                      <option value={true}>Sim</option>
-                      <option value={false}>Não</option>
+                      <option value="true">Sim</option> {/* ← Strings */}
+                      <option value="false">Não</option> {/* ← Strings */}
                     </select>
                   </div>
                 </>

@@ -7,24 +7,46 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"fmt"
 
-	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db" // IMPORTA O PACOTE DB
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/data"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 )
 
+
 func StartAPI() {
+    sensores, err := db.BuscarSensoresDisplay()
+	if err != nil {
+		log.Printf("api.go diz: Erro ao buscar sensores para exibição: %v", err)
+	} else {
+		data.DadosDisplayMutex.Lock()
+		data.DadosDisplay = make([]data.InfoDisplay, 0, len(sensores))
+		for i := 0; i < len(sensores); i++ {
+			var dadoDisplay data.InfoDisplay
+			dadoDisplay.SensorID = sensores[i].MqttID
+			dadoDisplay.SensorData = sensores[i].LastData
+			data.DadosDisplay = append(data.DadosDisplay, dadoDisplay)
+		}
+		data.DadosDisplayMutex.Unlock()
+
+		fmt.Printf("api.go diz: terminou o carregamento de %d sensores\n", len(sensores))
+	}
+
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{"http://10.1.203.113:3000"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
 		MaxAge:           300, // cache preflight for 5 minutes
 	}))
+
 
 	// ROTAS
 	r.Get("/api/topicsJSON", GetTopicsJSON)
@@ -36,6 +58,7 @@ func StartAPI() {
 	r.Put("/api/sensorUpdate/{id}", UpdateSensorVisibility)
 
 	http.ListenAndServe(":8080", r)
+
 }
 
 // Handlers
@@ -69,6 +92,8 @@ func GetSensorsJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("api.go ao atualizar sensores do topico diz: topico recebido foi: ", topicName);
+
 	// Buscar sensores pelo tópico
 	sensores, err := db.BuscarSensoresPorTopico(topicName)
 	if err != nil {
@@ -96,7 +121,19 @@ func DeleteSensor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Usando a nova função DeletarSensor
+	// Remover o sensor da lista DadosDisplay antes de deletar do banco
+	data.DadosDisplayMutex.Lock()
+	for i, display := range data.DadosDisplay {
+		if display.SensorID == idSensor {
+			// Remove o sensor da slice
+			data.DadosDisplay = append(data.DadosDisplay[:i], data.DadosDisplay[i+1:]...)
+			log.Printf("Sensor %s removido da lista DadosDisplay", idSensor)
+			break
+		}
+	}
+	data.DadosDisplayMutex.Unlock()
+
+	// Usando a função DeletarSensor para remover do banco de dados
 	err := db.DeletarSensor(idSensor)
 	if err != nil {
 		if err.Error() == "api.go diz: sensor não encontrado" {
@@ -120,7 +157,7 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		MqttID       string `json:"mqttID"`
 		TopicName    string `json:"topicName"`
 		Descricao    string `json:"descricao"`
-		ShowOnScreen bool `json:"showOnScreen"`
+		ShowOnScreen bool   `json:"showOnScreen"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -131,16 +168,25 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 
 	if !db.TopicoExiste(payload.TopicName) {
 		log.Printf("api.go diz: topico inexistente")
-		http.Error(w, `{"error": topico inexistente"}`, http.StatusBadRequest)
+		http.Error(w, `{"error": "topico inexistente"}`, http.StatusBadRequest)
 		return
 	}
 
+	// Cria uma lista de valores de sensor, preenche com um valor de sensor nulo para salvar no campo obrigatório de LastData no BD
+	var nullInfoList []data.SensorValue
+	var nullInfo data.SensorValue
+	nullInfo.InfoType = "null"
+	nullInfo.Valor = 0
+	nullInfo.Unidade = "null"
+	nullInfoList = append(nullInfoList, nullInfo)
+
 	// Cria o sensor com a struct Sensor
-	sensor := db.Sensor{
+	sensor := data.Sensor{
 		MqttID:       payload.MqttID,
-		TopicName:    payload.TopicName, // Usando TopicName em vez de topicID
+		TopicName:    payload.TopicName,
 		Descricao:    payload.Descricao,
 		LastUpdate:   time.Date(1977, 11, 18, 12, 0, 0, 0, time.UTC),
+		LastData:     nullInfoList,
 		ShowOnScreen: payload.ShowOnScreen,
 	}
 
@@ -149,6 +195,17 @@ func CreateSensor(w http.ResponseWriter, r *http.Request) {
 		log.Printf("api.go diz: Erro ao criar sensor '%s' - %v", payload.MqttID, err)
 		http.Error(w, `{"error": "Erro ao criar sensor"}`, http.StatusInternalServerError)
 		return
+	}
+
+	// Se o sensor deve ser exibido na tela, adicionar à lista DadosDisplay
+	if payload.ShowOnScreen {
+		data.DadosDisplayMutex.Lock()
+		data.DadosDisplay = append(data.DadosDisplay, data.InfoDisplay{
+			SensorID:   payload.MqttID,
+			SensorData: nullInfoList,
+		})
+		data.DadosDisplayMutex.Unlock()
+		log.Printf("api.go diz: Sensor '%s' adicionado à lista DadosDisplay", payload.MqttID)
 	}
 
 	log.Printf("api.go diz: Sensor '%s' criado com sucesso para o tópico '%s'", payload.MqttID, payload.TopicName)
@@ -175,7 +232,10 @@ func UpdateSensorVisibility(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := db.AtualizarSensorVisibilidade(mqttID, payload.ShowOnScreen)
+	sensor, err := db.BuscarSensorPorNome(mqttID);
+
+	// Atualizar no banco de dados
+	err = db.AtualizarSensorVisibilidade(mqttID, payload.ShowOnScreen)
 	if err != nil {
 		if strings.Contains(err.Error(), "não encontrado") {
 			log.Printf("api.go diz: Sensor '%s' não encontrado", mqttID)
@@ -185,6 +245,42 @@ func UpdateSensorVisibility(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error": "Erro ao atualizar sensor"}`, http.StatusInternalServerError)
 		}
 		return
+	}
+
+	// Atualizar a lista DadosDisplay
+	data.DadosDisplayMutex.Lock()
+	defer data.DadosDisplayMutex.Unlock()
+
+	if payload.ShowOnScreen {
+		// Se showOnScreen = true, adicionar ou atualizar na lista
+		found := false
+		for i, display := range data.DadosDisplay {
+			if display.SensorID == mqttID {
+				// Atualizar dados existentes mantendo os dados atuais
+				data.DadosDisplay[i].SensorData = sensor.LastData
+				found = true
+				log.Printf("api.go diz: Sensor '%s' atualizado na lista DadosDisplay", mqttID)
+				break
+			}
+		}
+		
+		if !found {
+			// Adicionar novo sensor à lista
+			data.DadosDisplay = append(data.DadosDisplay, data.InfoDisplay{
+				SensorID:   mqttID,
+				SensorData: sensor.LastData,
+			})
+			log.Printf("api.go diz: Sensor '%s' adicionado à lista DadosDisplay", mqttID)
+		}
+	} else {
+		// Se showOnScreen = false, remover da lista
+		for i, display := range data.DadosDisplay {
+			if display.SensorID == mqttID {
+				data.DadosDisplay = append(data.DadosDisplay[:i], data.DadosDisplay[i+1:]...)
+				log.Printf("api.go diz: Sensor '%s' removido da lista DadosDisplay", mqttID)
+				break
+			}
+		}
 	}
 
 	log.Printf("api.go diz: Sensor '%s' atualizado com sucesso - showOnScreen: %t", mqttID, payload.ShowOnScreen)
@@ -219,7 +315,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Cria o tópico
-	novoTopico := db.Topic{
+	novoTopico := data.Topic{
 		Nome: payload.Nome,
 	}
 
@@ -238,25 +334,13 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetSensorView(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	sensores, err := db.BuscarSensoresDisplay()
-	if err != nil {
-		http.Error(w, "Erro ao buscar sensores para exibição: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Prepara resposta convertendo para JSON
-	var resposta []map[string]interface{}
-	for _, s := range sensores {
-		resposta = append(resposta, map[string]interface{}{
-			"mqttID":       s.MqttID,
-			"descricao":    s.Descricao,
-			"lastUpdate":   s.LastUpdate,
-			"showOnScreen": s.ShowOnScreen,
-			"topicID":      s.TopicName, // mantém o vínculo com o tópico
-		})
-	}
-
-	json.NewEncoder(w).Encode(resposta)
+    w.Header().Set("Content-Type", "application/json")
+    
+    data.DadosDisplayMutex.Lock()
+    if err := json.NewEncoder(w).Encode(data.DadosDisplay); err != nil {
+        log.Printf("Erro ao serializar DadosDisplay: %v", err)
+        http.Error(w, `{"error": "Erro ao processar dados"}`, http.StatusInternalServerError)
+        return
+    }
+	data.DadosDisplayMutex.Unlock()
 }

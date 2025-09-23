@@ -11,7 +11,7 @@ function PagAdmin() {
 
   // 1. Buscar tópicos ao montar
   useEffect(() => {
-    fetch('http://localhost:8080/api/topicsJSON')  
+    fetch('http://10.1.203.113:8080/api/topicsJSON')  
       .then(response => response.json())
       .then(data => setTopicos(data))
       .catch(err => console.error('Erro ao buscar tópicos:', err));
@@ -20,8 +20,12 @@ function PagAdmin() {
   // 2. Buscar sensores quando topicoSelecionado mudar
   useEffect(() => {
     if (!topicoSelecionado) return;
+    
+    console.log('URL completa:', `http://10.1.203.113:8080/api/sensorJSON?topic=${topicoSelecionado}`);
+    const topicEncoded = encodeURIComponent(topicoSelecionado);
+    console.log('Tópico codificado:', topicEncoded);
 
-    fetch(`http://localhost:8080/api/sensorJSON?topic=${topicoSelecionado}`) 
+    fetch(`http://10.1.203.113:8080/api/sensorJSON?topic=${topicEncoded}`) 
       .then(response => response.json())
       .then(data => setSensoresSelecionados(data))
       .catch(err => console.error('Erro ao buscar sensores:', err));
@@ -38,7 +42,7 @@ function PagAdmin() {
 
   const handleRemoverSensor = async (sensorId) => {
     try {
-      const res = await fetch(`http://localhost:8080/api/sensorDelete/${sensorId}`, {
+      const res = await fetch(`http://10.1.203.113:8080/api/sensorDelete/${sensorId}`, {
         method: 'DELETE'
       });
 
@@ -56,7 +60,7 @@ function PagAdmin() {
 
   const handleAdded = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/topicsJSON');
+      const response = await fetch('http://10.1.203.113:8080/api/topicsJSON');
       const data = await response.json();
       setTopicos(data);
     } catch (err) {
@@ -68,7 +72,12 @@ function PagAdmin() {
   if (!topicoSelecionado) return;
   
   try {
-    const response = await fetch(`http://localhost:8080/api/sensorJSON?topic=${topicoSelecionado}`);
+      console.log("estou buscando a lista nova de sensores");
+      console.log("o topico original é: ", topicoSelecionado);
+    const topicEncoded = encodeURIComponent(topicoSelecionado);
+      console.log("o tópico codificado é: , topicEncoded");
+    const response = await fetch(`http://10.1.203.113:8080/api/sensorJSON?topic=${topicEncoded}`);
+    
     const data = await response.json();
     setSensoresSelecionados(data);
   } catch (err) {
@@ -101,7 +110,8 @@ function PagAdmin() {
       ) : (
         <>
           <button onClick={handleVoltar} className="botao-voltar">← Voltar</button>
-          <h3>Sensores do tópico: <em>{topicoSelecionado}</em></h3>
+          <h3>Sensores do tópico: <em>{topicoSelecionado}</em> {console.log("ADM diz: ",sensoresSelecionados)}</h3>
+
           <StatusSensor 
             sensores={sensoresSelecionados} 
             onRemoveSensor={handleRemoverSensor} 

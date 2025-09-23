@@ -1,0 +1,77 @@
+const mqtt = require("mqtt");
+
+// Variáveis de ambiente (ou você pode substituir direto pelas strings)
+const brokerUrl = "mqtts://au1.cloud.thethings.network:8883";
+const clientId = "heltec-env-monitoring";
+const username = "e31@ttn";
+const password = "NNSXS.RTWHDCIKBAACJUWEQH2XO3HXRVWTUGCU3JZLSMA.BUNGGPRKLAR4NV43TCZOI4ZT73CON7KQGB3DOOYY3XVXREIMXATQ";
+const topic = "v3/e31@ttn/devices/e31heltec/up";
+
+// JSON que será enviado
+const message = {
+  end_device_ids: {
+    device_id: "e31hltec",
+    application_ids: {
+      application_id: "e31",
+    },
+    dev_eui: "70B3D57ED00724FA",
+    join_eui: "0000000000000000",
+    dev_addr: "260D1F30",
+  },
+  correlation_ids: ["gs:uplink:01K377D1FE0N1QVZSE35HYC5QD"],
+  received_at: "2025-08-21T21:08:51.011075263Z",
+  uplink_message: {
+    session_key_id: "AZjOc/MorKM4hEwyI7DYA==",
+    f_port: 1,
+    f_cnt: 18,
+    frm_payload: "dGVtcGVYXR1cmE5MjMuMCxDLHVtYWRl,60.0,%", 
+    decoded_payload: {
+      message: "temperatura,23.0,C,umidade,60.0,%",
+    },
+    rx_metadata: [{}],
+    settings: {
+      data_rate: {},
+      frequency: "917000000",
+      timestamp: 619802646,
+      time: "2025-08-21T21:08:50.613867Z",
+    },
+    received_at: "2025-08-21T21:08:50.800494643Z",
+    consumed_airtime: "0.092416s",
+    network_ids: {
+      net_id: "000013",
+      ns_id: "EC656E0000000183",
+      tenant_id: "ttn",
+      cluster_id: "au1",
+      cluster_address: "au1.cloud.thethings.network",
+    },
+  },
+};
+
+// Conecta ao broker
+const client = mqtt.connect(brokerUrl, {
+  clientId,
+  username,
+  password,
+  clean: true,
+  reconnectPeriod: 5000,
+});
+
+// Eventos
+client.on("connect", () => {
+  console.log("[MQTT] Conectado ao broker:", brokerUrl);
+  
+  // Publica mensagem
+  const payload = JSON.stringify(message);
+  client.publish(topic, payload, { qos: 1 }, (err) => {
+    if (err) {
+      console.error("[MQTT] Erro ao publicar:", err);
+    } else {
+      console.log("[MQTT] Mensagem publicada no tópico:", topic);
+    }
+    client.end(); // encerra a conexão após publicar
+  });
+});
+
+client.on("error", (err) => {
+  console.error("[MQTT] Erro:", err);
+});
