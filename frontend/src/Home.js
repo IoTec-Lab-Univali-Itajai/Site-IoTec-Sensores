@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import CardSensor from './components/CardSensor';
+import CardSensor from './components/cardSensor';
 
 function Home() {
   const [sensores, setSensores] = useState([]);
