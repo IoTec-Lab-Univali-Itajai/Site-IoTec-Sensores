@@ -11,6 +11,7 @@ import (
 
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/data"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/mqtt"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -331,6 +332,7 @@ func CreateTopic(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"message": "Tópico criado com sucesso",
 	})
+	mqtt.BuscarConectarTopicos();
 }
 
 func GetSensorView(w http.ResponseWriter, r *http.Request) {

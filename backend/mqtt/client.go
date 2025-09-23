@@ -154,3 +154,23 @@ func ConnectMQTT(topicosString string) {
 		log.Fatalln("[MQTT] Erro ao conectar:", token.Error())
 	}
 }
+
+func DisconnectMQTT() {
+    if Client != nil && Client.IsConnected() {
+        fmt.Println("[MQTT] Desconectando do broker...")
+        
+        // Define um timeout para a desconexão (em milissegundos)
+        Client.Disconnect(250)
+        fmt.Println("[MQTT] Desconectado com sucesso")
+    } else {
+        fmt.Println("[MQTT] Cliente não está conectado")
+    }
+}
+
+// Função para verificar status da conexão
+func IsConnected() bool {
+    if Client != nil {
+        return Client.IsConnected()
+    }
+    return false
+}
