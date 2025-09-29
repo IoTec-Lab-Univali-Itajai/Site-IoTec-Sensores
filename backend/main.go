@@ -5,6 +5,7 @@ import (
 
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/api"
 	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/mqtt"
+	"github.com/IoTec-Lab-Univali-Itajai/Site-IoTec-Sensores/backend/db"
 	"github.com/joho/godotenv"
 )
 
@@ -14,8 +15,9 @@ func main() {
 		log.Println("Main.go diz: ⚠️  Arquivo .env não encontrado, prosseguindo sem ele")
 	}
 
+	db.ConnectMongoDB()
+
 	mqtt.BuscarConectarTopicos();
 
-	// Inicia o servidor de API
 	api.StartAPI() // servidor em :8080
 }

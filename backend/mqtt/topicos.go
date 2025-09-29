@@ -8,9 +8,6 @@ import(
 )
 
 func BuscarConectarTopicos(){
-	// Conecta no banco de dados
-	db.ConnectMongoDB()
-
 	// Busca tópicos do banco (como slice de Topic)
 	topicos, err := db.BuscarTopicos()
 	if err != nil {

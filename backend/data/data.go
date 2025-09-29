@@ -6,7 +6,6 @@ import (
 )
 
 
-//STRUCTS e VARIAVEIS GLOBAIS DE BANCO DE DADOS=========================================================================
 type Topic struct {
     Nome string `bson:"nome" json:"nome"`
 }
@@ -26,17 +25,11 @@ type SensorData struct {
     Dados     map[string]any  `bson:"dados" json:"dados"`
 }
 
-//=============================================================================================================
-//STRUCTS E VARIAVEIS GLOBAIS DE MQTT ================================================================================================
-
 type SensorValue struct {
 	InfoType string  `json:"infoType" bson:"infotype"`
 	Valor    float64 `json:"valor" bson:"valor"`
 	Unidade  string  `json:"unidade" bson:"unidade"`
 }
-
-//=============================================================================================================
-//STRUCTS E VARIAVEIS GLOBAIS DE API
 
 type InfoDisplay struct{
 	SensorID string `json:"SensorID"`
@@ -45,5 +38,3 @@ type InfoDisplay struct{
 
 var DadosDisplay []InfoDisplay;
 var DadosDisplayMutex sync.Mutex;
-
-func removerDoDisplay(){}

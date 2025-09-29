@@ -23,7 +23,7 @@
     border-radius: 8px;
     padding: 10px 15px;
     min-width: 70px;
-    max-width: 120px;      /* limite máximo da largura */
+    max-width: 150px;      /* limite máximo da largura */
     max-height: 140px;     /* limite máximo da altura */
     text-align: center;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
